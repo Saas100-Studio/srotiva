@@ -104,8 +104,8 @@ export default function Home() {
           <a href="#api">API</a>
         </nav>
         <div className="header-actions">
-          <a href="#signin">Sign in</a>
-          <a className="button button--small" href="#builder">
+          <a href="/login">Sign in</a>
+          <a className="button button--small" href="/signup">
             Sign up
           </a>
         </div>

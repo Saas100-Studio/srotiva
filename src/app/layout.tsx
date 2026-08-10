@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Morsel | Small bites from the live web",
   description:
-    "Turn websites, newsletters, and social sources into clean feeds, widgets, and alerts.",
+    "Turn websites and native feeds into reliable RSS, JSON, and CSV feeds.",
 };
 
 export default function RootLayout({

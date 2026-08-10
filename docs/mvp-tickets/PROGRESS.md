@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 00 - Foundation
-- Next ticket (not started): `S00-T03-auth-and-default-workspace.md`
+- Next ticket (not started): `S00-T04-authorization-and-audit-logs.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -51,7 +51,7 @@ Do not write real secrets in this file.
 | S00-T01 Runtime Config and API Errors | Done | `main` | `node --test src/test/config-env.test.mjs src/test/api-errors.test.mjs`; `node --test src/test/api-errors.test.mjs`; `bun run check` | 5 API-focused tests passed; 12 full-suite tests and production build passed. Error responses preserve their `MorselApiError` HTTP status. |
 | S00-T01b TypeScript and Lint Setup | Done | `main` / `8e4ca03` | `bun install`; `bun run typecheck`; `bun run lint`; `bun run check` | Standalone typecheck regenerates Next.js route types before running strict TypeScript. All 13 tests, typecheck, lint, and build pass. See the ticket for setup detail and Decisions for the `typescript`/`eslint` version pins. |
 | S00-T02 Database Schema and Client | Done | `main` / `59e709d` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate dev --name init_mvp_schema --create-only`; `bunx prisma migrate dev`; `bun run db:seed`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `bunx prisma migrate deploy`; `node --env-file=.env.local --test src/test/db-schema.test.ts`; `bun run check` | Initial PostgreSQL schema and migration, reusable client, repository helpers, idempotent development seed, feed/workspace tenant-integrity constraints, and constraint tests are complete. All 20 tests, lint, typecheck, and production build pass. |
-| S00-T03 Auth and Default Workspace | Not Started |  |  | `SESSION_SECRET` is configured; auth implementation has not started. |
+| S00-T03 Auth and Default Workspace | Done | `main` | `bun add argon2`; `node --env-file-if-exists=.env.local --test src/test/auth-password.test.ts src/test/auth-session.test.ts src/test/auth-routes.test.ts`; `bun run check` | Argon2id password auth, signed 30-day session cookies, signup/login/logout/me APIs, atomic default workspace ownership with randomized slug collision fallback, minimal auth pages, and the authenticated dashboard landing are complete. All 33 tests, lint, strict typecheck, and production build pass. No database migration was needed. |
 | S00-T04 Authorization and Audit Logs | Not Started |  |  |  |
 | S01-T01 URL Safety and SSRF Protection | Not Started |  |  |  |
 | S01-T02 HTTP Fetcher and Robots Policy | Not Started |  |  | Needs crawler env values. |
@@ -84,7 +84,7 @@ Release type: internal only.
 
 Expected user-facing change: none.
 
-Message: Core app infrastructure is being prepared so accounts, workspaces, database records, and future feed workflows are reliable.
+Message: Core app infrastructure now supports secure account signup, login, logout, and automatic first-workspace creation for future feed workflows.
 
 ### Sprint 01 - Feed Engine Core
 
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S00-T02 is complete, and its initial migration is applied to the configured PostgreSQL database. S00-T03 can use the configured `SESSION_SECRET`, `APP_URL`, and `DATABASE_URL`.
+No blockers recorded. S00-T03 is complete. S00-T04 can use the existing `DATABASE_URL` and `SESSION_SECRET`; no new environment variables are currently needed.
 
 ## Decisions
 
@@ -144,5 +144,7 @@ No blockers recorded. S00-T02 is complete, and its initial migration is applied 
 - Enforce matching feed and workspace IDs for feed items, feed filters, and refresh jobs with composite foreign keys to prevent cross-workspace records.
 - Database tests create uniquely named records, remove them after each suite, and load `.env.local` only when it exists so CI-provided environment variables remain supported.
 - Use database-backed refresh jobs for MVP before adding Redis/BullMQ.
+- Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
+- Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.
