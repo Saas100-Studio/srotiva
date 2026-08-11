@@ -5,6 +5,7 @@ import { POST as login } from "../app/api/auth/login/route.ts";
 import { POST as logout } from "../app/api/auth/logout/route.ts";
 import { POST as signup } from "../app/api/auth/signup/route.ts";
 import { GET as getMe } from "../app/api/me/route.ts";
+import { signup as signupAccount } from "../lib/auth/account.ts";
 import { SESSION_COOKIE_NAME } from "../lib/auth/session.ts";
 import { getDb } from "../lib/db/client.ts";
 
@@ -116,6 +117,31 @@ test("auth routes create and authenticate an account", async (t) => {
       assert.equal(body.error?.code, "EMAIL_TAKEN");
     });
 
+    await t.test("signup rolls back when its audit write fails", async () => {
+      const rollbackEmail = `rollback-${suffix}@morsel.test`;
+
+      await assert.rejects(
+        signupAccount(
+          {
+            email: rollbackEmail,
+            password,
+            name: "Rollback Test User",
+          },
+          {
+            writeAuditLog: async () => {
+              throw new Error("Simulated audit failure.");
+            },
+          },
+        ),
+        /Simulated audit failure/,
+      );
+
+      assert.equal(
+        await db.user.findUnique({ where: { email: rollbackEmail } }),
+        null,
+      );
+    });
+
     await t.test("login rejects the wrong password", async () => {
       const response = await login(
         jsonRequest("/api/auth/login", {
@@ -167,12 +193,37 @@ test("auth routes create and authenticate an account", async (t) => {
     });
 
     await t.test("logout clears the session cookie", async () => {
-      const response = logout();
+      const response = await logout(
+        new Request("http://localhost:3000/api/auth/logout", {
+          method: "POST",
+          headers: { cookie: sessionCookie },
+        }),
+      );
       const setCookie = response.headers.get("set-cookie") ?? "";
 
       assert.equal(response.status, 200);
       assert.match(setCookie, new RegExp(`^${SESSION_COOKIE_NAME}=;`));
       assert.match(setCookie, /Max-Age=0/);
+    });
+
+    await t.test("successful auth actions write audit logs", async () => {
+      const auditLogs = await db.auditLog.findMany({
+        where: { actorUserId: userId, workspaceId },
+        select: { action: true, targetType: true, targetId: true, metadata: true },
+      });
+
+      assert.deepEqual(
+        auditLogs.map(({ action }) => action).sort(),
+        ["auth.login", "auth.logout", "auth.signup"],
+      );
+      for (const auditLog of auditLogs) {
+        assert.equal(auditLog.targetType, "user");
+        assert.equal(auditLog.targetId, userId);
+      }
+      assert.deepEqual(
+        auditLogs.find(({ action }) => action === "auth.login")?.metadata,
+        { authenticationMethod: "password" },
+      );
     });
   } finally {
     const workspaceIds = [workspaceId, collisionWorkspaceId].filter(Boolean);
@@ -181,6 +232,9 @@ test("auth routes create and authenticate an account", async (t) => {
     }
     const userIds = [userId, collisionUserId].filter(Boolean);
     if (userIds.length > 0) {
+      await db.auditLog.deleteMany({
+        where: { actorUserId: { in: userIds } },
+      });
       await db.user.deleteMany({ where: { id: { in: userIds } } });
     }
     await db.$disconnect();

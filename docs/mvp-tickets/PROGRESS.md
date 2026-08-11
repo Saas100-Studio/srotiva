@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 00 - Foundation
-- Next ticket (not started): `S00-T04-authorization-and-audit-logs.md`
+- Next ticket (not started): `S01-T01-url-safety-and-ssrf-protection.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -52,7 +52,7 @@ Do not write real secrets in this file.
 | S00-T01b TypeScript and Lint Setup | Done | `main` / `8e4ca03` | `bun install`; `bun run typecheck`; `bun run lint`; `bun run check` | Standalone typecheck regenerates Next.js route types before running strict TypeScript. All 13 tests, typecheck, lint, and build pass. See the ticket for setup detail and Decisions for the `typescript`/`eslint` version pins. |
 | S00-T02 Database Schema and Client | Done | `main` / `59e709d` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate dev --name init_mvp_schema --create-only`; `bunx prisma migrate dev`; `bun run db:seed`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `bunx prisma migrate deploy`; `node --env-file=.env.local --test src/test/db-schema.test.ts`; `bun run check` | Initial PostgreSQL schema and migration, reusable client, repository helpers, idempotent development seed, feed/workspace tenant-integrity constraints, and constraint tests are complete. All 20 tests, lint, typecheck, and production build pass. |
 | S00-T03 Auth and Default Workspace | Done | `main` | `bun add argon2`; `node --env-file-if-exists=.env.local --test src/test/auth-password.test.ts src/test/auth-session.test.ts src/test/auth-routes.test.ts`; `bun run check` | Argon2id password auth, signed 30-day session cookies, signup/login/logout/me APIs, atomic default workspace ownership with randomized slug collision fallback, minimal auth pages, and the authenticated dashboard landing are complete. All 33 tests, lint, strict typecheck, and production build pass. No database migration was needed. |
-| S00-T04 Authorization and Audit Logs | Not Started |  |  |  |
+| S00-T04 Authorization and Audit Logs | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/workspace-access.test.ts src/test/audit-log.test.ts src/test/auth-routes.test.ts`; `bun run check` | Owner/editor/viewer hierarchy, active-workspace request context, cross-workspace denial, audit helper, and successful signup/login/logout audit events are complete. Signup and its audit row commit atomically. Both required audit indexes already existed, so no migration was needed. All 42 tests, lint, strict typecheck, and production build pass. |
 | S01-T01 URL Safety and SSRF Protection | Not Started |  |  |  |
 | S01-T02 HTTP Fetcher and Robots Policy | Not Started |  |  | Needs crawler env values. |
 | S01-T03 Native Feed Parser and Fingerprints | Not Started |  |  |  |
@@ -84,7 +84,7 @@ Release type: internal only.
 
 Expected user-facing change: none.
 
-Message: Core app infrastructure now supports secure account signup, login, logout, and automatic first-workspace creation for future feed workflows.
+Message: Core app infrastructure now supports secure account auth, automatic first-workspace creation, tenant-safe role checks, and audit logging for future feed workflows.
 
 ### Sprint 01 - Feed Engine Core
 
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S00-T03 is complete. S00-T04 can use the existing `DATABASE_URL` and `SESSION_SECRET`; no new environment variables are currently needed.
+No blockers recorded. S00-T04 is complete. S01-T01 needs no new environment variables; `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, and `FETCH_MAX_BYTES` remain needed for S01-T02.
 
 ## Decisions
 
@@ -146,5 +146,7 @@ No blockers recorded. S00-T03 is complete. S00-T04 can use the existing `DATABAS
 - Use database-backed refresh jobs for MVP before adding Redis/BullMQ.
 - Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
 - Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
+- Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.
+- Build request context from the authenticated user's active workspace and revalidate its active membership through the shared role helper. Successful password signup/login and authenticated logout events write user-targeted audit rows; signup creates its audit row in the account transaction so partial signup state cannot survive an audit failure. The required audit indexes were already present in the initial schema.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.

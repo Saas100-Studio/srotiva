@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import { Prisma, WorkspaceRole } from "@prisma/client";
 
 import { MorselApiError } from "../api/errors.ts";
+import {
+  writeAuditLog,
+  type AuditLogClient,
+  type WriteAuditLogInput,
+} from "../audit/audit-log.ts";
 import { getDb } from "../db/client.ts";
 import {
   findCurrentUserById,
@@ -11,6 +16,15 @@ import {
 import { hashPassword, verifyPassword } from "./password.ts";
 
 const MAX_RANDOM_SLUG_ATTEMPTS = 5;
+
+type AuditWriter = (
+  input: WriteAuditLogInput,
+  client?: AuditLogClient,
+) => ReturnType<typeof writeAuditLog>;
+
+export type SignupDependencies = {
+  writeAuditLog?: AuditWriter;
+};
 
 export type AuthInput = {
   email: string;
@@ -111,8 +125,12 @@ function emailTaken(): MorselApiError {
   );
 }
 
-export async function signup(input: AuthInput): Promise<CurrentUser> {
+export async function signup(
+  input: AuthInput,
+  dependencies: SignupDependencies = {},
+): Promise<CurrentUser> {
   const db = getDb();
+  const writeSignupAuditLog = dependencies.writeAuditLog ?? writeAuditLog;
   const passwordHash = await hashPassword(input.password);
   const slugBase = workspaceSlugBase(input.email);
   const workspaceName = `${input.name ?? input.email.split("@")[0]}'s Workspace`;
@@ -134,7 +152,7 @@ export async function signup(input: AuthInput): Promise<CurrentUser> {
           },
         });
 
-        await transaction.workspace.create({
+        const workspace = await transaction.workspace.create({
           data: {
             name: workspaceName,
             slug,
@@ -148,6 +166,18 @@ export async function signup(input: AuthInput): Promise<CurrentUser> {
             },
           },
         });
+
+        await writeSignupAuditLog(
+          {
+            workspaceId: workspace.id,
+            actorUserId: createdUser.id,
+            action: "auth.signup",
+            targetType: "user",
+            targetId: createdUser.id,
+            metadata: { authenticationMethod: "password" },
+          },
+          transaction,
+        );
 
         return createdUser;
       });

@@ -21,3 +21,24 @@ export function createUser({
     },
   });
 }
+
+export function findUserWithActiveWorkspaceMembershipsById(userId: string) {
+  return getDb().user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      memberships: {
+        where: { workspace: { status: "ACTIVE" } },
+        orderBy: { createdAt: "asc" },
+        select: {
+          role: true,
+          workspace: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+      },
+    },
+  });
+}

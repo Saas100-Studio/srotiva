@@ -28,3 +28,26 @@ export function createWorkspaceWithOwner({
     },
   });
 }
+
+export type FindWorkspaceMembershipInput = {
+  userId: string;
+  workspaceId: string;
+};
+
+export function findActiveWorkspaceMembership({
+  userId,
+  workspaceId,
+}: FindWorkspaceMembershipInput) {
+  return getDb().workspaceMember.findFirst({
+    where: {
+      userId,
+      workspaceId,
+      workspace: { status: "ACTIVE" },
+    },
+    select: {
+      userId: true,
+      workspaceId: true,
+      role: true,
+    },
+  });
+}

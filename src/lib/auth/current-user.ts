@@ -1,5 +1,5 @@
 import { MorselApiError } from "../api/errors.ts";
-import { getDb } from "../db/client.ts";
+import { findUserWithActiveWorkspaceMembershipsById } from "../db/repositories/users.ts";
 import {
   sessionTokenFromCookieHeader,
   verifySessionToken,
@@ -27,24 +27,7 @@ export type CurrentUser = {
 export async function findCurrentUserById(
   userId: string,
 ): Promise<CurrentUser | null> {
-  const user = await getDb().user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      memberships: {
-        where: { workspace: { status: "ACTIVE" } },
-        orderBy: { createdAt: "asc" },
-        select: {
-          role: true,
-          workspace: {
-            select: { id: true, name: true, slug: true },
-          },
-        },
-      },
-    },
-  });
+  const user = await findUserWithActiveWorkspaceMembershipsById(userId);
 
   if (!user || user.memberships.length === 0) {
     return null;
