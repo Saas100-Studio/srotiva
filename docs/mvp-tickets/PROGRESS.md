@@ -1,13 +1,13 @@
 # Morsel MVP Progress
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 Use this file to help Codex agents understand the current implementation state without rereading the full PRD. Update it after every ticket.
 
 ## Current State
 
-- Current sprint: Sprint 00 - Foundation
-- Next ticket (not started): `S01-T01-url-safety-and-ssrf-protection.md`
+- Current sprint: Sprint 01 - Feed Engine Core
+- Next ticket (not started): `S01-T02-http-fetcher-and-robots.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -38,9 +38,9 @@ Do not write real secrets in this file.
 | `APP_URL` | S00-T01 | Documented | Local value can be `http://localhost:3000`. |
 | `DATABASE_URL` | S00-T02 | Configured; migrations verified | Present in `.env.local`. The initial schema and feed/workspace tenancy migrations, seed, schema tests, and full verification passed by 2026-07-23. |
 | `SESSION_SECRET` | S00-T01, S00-T03 | Configured | A generated 64-character secret is present in `.env.local`. Do not copy it into source control or documentation. |
-| `CRAWLER_USER_AGENT` | S00-T01, S01-T02 | Needed later | Use an identifiable product user agent. |
-| `FETCH_TIMEOUT_MS` | S00-T01, S01-T02 | Documented | Suggested local value: `10000`. |
-| `FETCH_MAX_BYTES` | S00-T01, S01-T02 | Documented | Suggested local value: `2000000`. |
+| `CRAWLER_USER_AGENT` | S00-T01, S01-T02 | Configured | An identifiable product user agent is present in `.env.local`. |
+| `FETCH_TIMEOUT_MS` | S00-T01, S01-T02 | Configured | Present in `.env.local`; suggested local value is `10000`. |
+| `FETCH_MAX_BYTES` | S00-T01, S01-T02 | Configured | Present in `.env.local`; suggested local value is `2000000`. |
 | `MANUAL_REFRESH_COOLDOWN_SECONDS` | S00-T01, S04-T03 | Documented | Suggested local value: `300`. |
 | External provider keys | Later advanced features | Not needed for MVP | No Stripe, Slack, Discord, Telegram, or email keys in strict MVP. |
 
@@ -53,8 +53,8 @@ Do not write real secrets in this file.
 | S00-T02 Database Schema and Client | Done | `main` / `59e709d` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate dev --name init_mvp_schema --create-only`; `bunx prisma migrate dev`; `bun run db:seed`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `bunx prisma migrate deploy`; `node --env-file=.env.local --test src/test/db-schema.test.ts`; `bun run check` | Initial PostgreSQL schema and migration, reusable client, repository helpers, idempotent development seed, feed/workspace tenant-integrity constraints, and constraint tests are complete. All 20 tests, lint, typecheck, and production build pass. |
 | S00-T03 Auth and Default Workspace | Done | `main` | `bun add argon2`; `node --env-file-if-exists=.env.local --test src/test/auth-password.test.ts src/test/auth-session.test.ts src/test/auth-routes.test.ts`; `bun run check` | Argon2id password auth, signed 30-day session cookies, signup/login/logout/me APIs, atomic default workspace ownership with randomized slug collision fallback, minimal auth pages, and the authenticated dashboard landing are complete. All 33 tests, lint, strict typecheck, and production build pass. No database migration was needed. |
 | S00-T04 Authorization and Audit Logs | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/workspace-access.test.ts src/test/audit-log.test.ts src/test/auth-routes.test.ts`; `bun run check` | Owner/editor/viewer hierarchy, active-workspace request context, cross-workspace denial, audit helper, and successful signup/login/logout audit events are complete. Signup and its audit row commit atomically. Both required audit indexes already existed, so no migration was needed. All 42 tests, lint, strict typecheck, and production build pass. |
-| S01-T01 URL Safety and SSRF Protection | Not Started |  |  |  |
-| S01-T02 HTTP Fetcher and Robots Policy | Not Started |  |  | Needs crawler env values. |
+| S01-T01 URL Safety and SSRF Protection | Done | `main` | `node --test src/test/url-safety.test.ts`; `bun run check` | Canonical HTTP(S) URL validation, credential and port rejection, deterministic DNS resolution, public-IP enforcement across IPv4/IPv6, metadata and localhost blocking, and redirect-target revalidation are complete. All 58 tests, lint, strict typecheck, and production build pass. No HTTP requests or new dependencies were added. |
+| S01-T02 HTTP Fetcher and Robots Policy | Not Started |  |  | Crawler environment values are configured. |
 | S01-T03 Native Feed Parser and Fingerprints | Not Started |  |  |  |
 | S01-T04 Feed Renderers | Not Started |  |  |  |
 | S02-T01 Native Feed Discovery | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S00-T04 is complete. S01-T01 needs no new environment variables; `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, and `FETCH_MAX_BYTES` remain needed for S01-T02.
+No blockers recorded. S01-T01 is complete. S01-T02 can use the configured `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, and `FETCH_MAX_BYTES`; no new environment variables are currently needed.
 
 ## Decisions
 
@@ -148,5 +148,6 @@ No blockers recorded. S00-T04 is complete. S01-T01 needs no new environment vari
 - Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.
 - Build request context from the authenticated user's active workspace and revalidate its active membership through the shared role helper. Successful password signup/login and authenticated logout events write user-targeted audit rows; signup creates its audit row in the account transaction so partial signup state cannot survive an audit failure. The required audit indexes were already present in the initial schema.
+- Fail URL safety closed: allow only HTTP/HTTPS without credentials on ports 80/443, require every DNS answer to be a public IPv4/IPv6 address, and re-run the same validation for redirects. Literal and obfuscated IP hosts are normalized before range checks; URL fragments are removed because they are not sent in HTTP requests.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.
