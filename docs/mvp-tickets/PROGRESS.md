@@ -1,13 +1,13 @@
 # Morsel MVP Progress
 
-Last updated: 2026-08-11
+Last updated: 2026-08-27
 
 Use this file to help Codex agents understand the current implementation state without rereading the full PRD. Update it after every ticket.
 
 ## Current State
 
 - Current sprint: Sprint 01 - Feed Engine Core
-- Next ticket (not started): `S01-T02-http-fetcher-and-robots.md`
+- Next ticket (not started): `S01-T03-native-feed-parser-and-fingerprints.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -54,7 +54,7 @@ Do not write real secrets in this file.
 | S00-T03 Auth and Default Workspace | Done | `main` | `bun add argon2`; `node --env-file-if-exists=.env.local --test src/test/auth-password.test.ts src/test/auth-session.test.ts src/test/auth-routes.test.ts`; `bun run check` | Argon2id password auth, signed 30-day session cookies, signup/login/logout/me APIs, atomic default workspace ownership with randomized slug collision fallback, minimal auth pages, and the authenticated dashboard landing are complete. All 33 tests, lint, strict typecheck, and production build pass. No database migration was needed. |
 | S00-T04 Authorization and Audit Logs | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/workspace-access.test.ts src/test/audit-log.test.ts src/test/auth-routes.test.ts`; `bun run check` | Owner/editor/viewer hierarchy, active-workspace request context, cross-workspace denial, audit helper, and successful signup/login/logout audit events are complete. Signup and its audit row commit atomically. Both required audit indexes already existed, so no migration was needed. All 42 tests, lint, strict typecheck, and production build pass. |
 | S01-T01 URL Safety and SSRF Protection | Done | `main` | `node --test src/test/url-safety.test.ts`; `bun run check` | Canonical HTTP(S) URL validation, credential and port rejection, deterministic DNS resolution, public-IP enforcement across IPv4/IPv6, metadata and localhost blocking, and redirect-target revalidation are complete. All 58 tests, lint, strict typecheck, and production build pass. No HTTP requests or new dependencies were added. |
-| S01-T02 HTTP Fetcher and Robots Policy | Not Started |  |  | Crawler environment values are configured. |
+| S01-T02 HTTP Fetcher and Robots Policy | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts`; `bun run lint`; `bun run typecheck`; `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts src/test/url-safety.test.ts`; `bun run check` | DNS-pinned manual redirects, streamed size limits, discarded-body cancellation, request timeout, crawler user-agent, structured results/errors, exact product-token robots policy, and a 10-minute process cache are complete. All 71 tests, lint, strict typecheck, and production build pass. |
 | S01-T03 Native Feed Parser and Fingerprints | Not Started |  |  |  |
 | S01-T04 Feed Renderers | Not Started |  |  |  |
 | S02-T01 Native Feed Discovery | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S01-T01 is complete. S01-T02 can use the configured `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, and `FETCH_MAX_BYTES`; no new environment variables are currently needed.
+No blockers recorded. S01-T02 is complete. S01-T03 needs no new environment variables currently; deterministic native feed fixtures should be used instead of live network calls.
 
 ## Decisions
 
@@ -149,5 +149,6 @@ No blockers recorded. S01-T01 is complete. S01-T02 can use the configured `CRAWL
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.
 - Build request context from the authenticated user's active workspace and revalidate its active membership through the shared role helper. Successful password signup/login and authenticated logout events write user-targeted audit rows; signup creates its audit row in the account transaction so partial signup state cannot survive an audit failure. The required audit indexes were already present in the initial schema.
 - Fail URL safety closed: allow only HTTP/HTTPS without credentials on ports 80/443, require every DNS answer to be a public IPv4/IPv6 address, and re-run the same validation for redirects. Literal and obfuscated IP hosts are normalized before range checks; URL fragments are removed because they are not sent in HTTP requests.
+- Follow redirects manually with a five-hop default so each target is revalidated before network access, and pin each connection to its validated public addresses to prevent DNS rebinding. Cancel discarded bodies, stream accepted bodies under the configured byte cap, apply one timeout across the complete fetch, and treat non-2xx responses as stable fetch errors. Cache `robots.txt` by origin for ten minutes; combine exact product-token groups, fall back to the wildcard group, and use longest-rule precedence with `Allow` winning ties.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.

@@ -1,5 +1,8 @@
 type EnvOverrides = Record<string, string | undefined>;
 
+export const DEFAULT_FETCH_MAX_REDIRECTS = 5;
+export const ROBOTS_CACHE_TTL_MS = 10 * 60 * 1_000;
+
 function positiveInteger(value: string | undefined, name: string): number {
   const normalized = typeof value === "string" ? value.trim() : value;
   const number = Number(normalized);
@@ -11,7 +14,7 @@ function positiveInteger(value: string | undefined, name: string): number {
   return number;
 }
 
-export function loadLimits(overrides: EnvOverrides = process.env) {
+export function loadFetchLimits(overrides: EnvOverrides = process.env) {
   return {
     FETCH_TIMEOUT_MS: positiveInteger(
       overrides.FETCH_TIMEOUT_MS,
@@ -21,6 +24,12 @@ export function loadLimits(overrides: EnvOverrides = process.env) {
       overrides.FETCH_MAX_BYTES,
       "FETCH_MAX_BYTES",
     ),
+  };
+}
+
+export function loadLimits(overrides: EnvOverrides = process.env) {
+  return {
+    ...loadFetchLimits(overrides),
     MANUAL_REFRESH_COOLDOWN_SECONDS: positiveInteger(
       overrides.MANUAL_REFRESH_COOLDOWN_SECONDS,
       "MANUAL_REFRESH_COOLDOWN_SECONDS",
