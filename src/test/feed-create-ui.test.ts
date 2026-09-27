@@ -59,12 +59,14 @@ test("feed client posts discovery and preview save payloads", async () => {
 test("feed client surfaces the API error message", async () => {
   const fetcher = (async () => Response.json({
     error: { code: "UNSAFE_URL", message: "Use a public website URL." },
+    requestId: "request-123",
   }, { status: 422 })) as typeof fetch;
 
   await assert.rejects(
     discoverFeed("workspace-id", "http://localhost", fetcher),
     (error: unknown) => error instanceof ClientApiError &&
-      error.code === "UNSAFE_URL" && error.message === "Use a public website URL.",
+      error.code === "UNSAFE_URL" && error.message === "Use a public website URL." &&
+      error.requestId === "request-123",
   );
 });
 

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { deleteFeed, updateFeedStatus } from "../lib/client/api-client.ts";
+import { ClientApiError, deleteFeed, updateFeedStatus } from "../lib/client/api-client.ts";
+import { ErrorState } from "./error-state.tsx";
 import { FeedStatusBadge } from "./feed-status-badge.tsx";
 
 type FeedSettingsPanelProps = {
@@ -28,18 +29,21 @@ export function FeedSettingsPanel({
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message: string; requestId?: string } | null>(null);
 
   async function toggleStatus() {
     const nextStatus = status === "PAUSED" ? "ACTIVE" : "PAUSED";
     setPending(true);
-    setError("");
+    setError(null);
     try {
       const feed = await updateFeedStatus(workspaceId, feedId, nextStatus);
       setStatus(feed.status);
       router.refresh();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to update the feed.");
+      setError({
+        message: requestError instanceof Error ? requestError.message : "Unable to update the feed.",
+        requestId: requestError instanceof ClientApiError ? requestError.requestId : undefined,
+      });
     } finally {
       setPending(false);
     }
@@ -48,13 +52,16 @@ export function FeedSettingsPanel({
   async function remove() {
     if (!window.confirm(`Delete “${feedName}”? This cannot be undone.`)) return;
     setPending(true);
-    setError("");
+    setError(null);
     try {
       await deleteFeed(workspaceId, feedId);
       router.push("/dashboard");
       router.refresh();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to delete the feed.");
+      setError({
+        message: requestError instanceof Error ? requestError.message : "Unable to delete the feed.",
+        requestId: requestError instanceof ClientApiError ? requestError.requestId : undefined,
+      });
       setPending(false);
     }
   }
@@ -75,7 +82,7 @@ export function FeedSettingsPanel({
           <button className="button button--danger" type="button" onClick={remove} disabled={pending}>Delete feed</button>
         </div>
       ) : <p className="muted-copy">You have view-only access to this feed.</p>}
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      {error ? <ErrorState message={error.message} requestId={error.requestId} /> : null}
     </section>
   );
 }

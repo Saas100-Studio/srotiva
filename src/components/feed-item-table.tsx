@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { EmptyState } from "./empty-state.tsx";
+
 type FeedItem = {
   id: string;
   title: string | null;
@@ -15,11 +17,19 @@ function displayDate(value: Date | null): string {
 export function FeedItemTable({ items }: { items: FeedItem[] }) {
   if (items.length === 0) {
     return (
-      <section className="empty-state feed-items-empty" aria-labelledby="feed-items-heading">
-        <h2 id="feed-items-heading">No items yet</h2>
-        <p>This feed has not produced any items. Check the source URL, or create a different feed.</p>
-        <Link className="button button--ghost" href="/dashboard/feeds/new">Create another feed</Link>
-      </section>
+      <EmptyState
+        title="No items yet"
+        labelledBy="feed-items-heading"
+        className="feed-items-empty"
+        action={(
+          <div className="state-actions">
+            <Link className="button button--ghost" href="/help/troubleshooting">Troubleshoot this feed</Link>
+            <Link href="/dashboard/feeds/new">Create another feed</Link>
+          </div>
+        )}
+      >
+        <p>This feed has not produced any items. Check the source and common causes.</p>
+      </EmptyState>
     );
   }
 

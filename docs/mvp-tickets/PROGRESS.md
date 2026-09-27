@@ -6,8 +6,8 @@ Use this file to help Codex agents understand the current implementation state w
 
 ## Current State
 
-- Current sprint: Sprint 03 - User Dashboard
-- Next ticket (not started): `S03-T04-help-empty-and-error-states.md`
+- Current sprint: Sprint 04 - Refresh Jobs
+- Next ticket (not started): `S04-T01-refresh-queue-and-worker-shell.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -65,7 +65,7 @@ Do not write real secrets in this file.
 | S03-T01 Authenticated Dashboard Shell | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/dashboard-shell.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Protected workspace-aware shell, honest MVP homepage, real saved-feed summary/empty state, loading state, account identity, accessible button contrast, and required navigation are complete. The obsolete mock builder and unsupported feature claims were removed. All 115 tests, lint, strict typecheck, and production build pass. |
 | S03-T02 Feed Creation UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-create-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Authenticated URL discovery, native/webpage preview labels, plain-language unsafe/empty-source errors, warning states, name override, stale-preview protection, guarded save, and feed-detail redirect are complete. All 119 tests, lint, strict typecheck, and production build pass. No dependency, API, or database changes were needed. |
 | S03-T03 Feed Detail UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-detail-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped feed details, source and schedule metadata, private/public output links, item previews, refresh history, copy controls, and role-aware pause/resume/delete actions are complete. Delete uses a native confirmation and manual refresh remains deferred to Sprint 04. All 123 tests, lint, strict typecheck, and production build pass. |
-| S03-T04 Help, Empty States, and Error States | Not Started |  |  |  |
+| S03-T04 Help, Empty States, and Error States | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/help-and-states.test.ts src/test/feed-create-ui.test.ts src/test/feed-detail-ui.test.ts src/test/dashboard-shell.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Static MVP help covers feed creation, native feeds versus webpage extraction, output formats, and common failures. Reusable accessible empty, error, and loading states now guide dashboard, creation, and detail flows; API errors retain request IDs and link to troubleshooting. All 127 tests, lint, strict typecheck, and production build pass. |
 | S04-T01 Refresh Queue and Worker Shell | Not Started |  |  | MVP uses database-backed jobs first. |
 | S04-T02 Refresh Worker Pipeline | Not Started |  |  |  |
 | S04-T03 Manual Refresh API and Throttle | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S03-T04 needs no new environment variables.
+No blockers recorded. S04-T01 needs no new environment variables.
 
 ## Decisions
 

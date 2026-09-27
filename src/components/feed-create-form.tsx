@@ -5,18 +5,21 @@ import { useState, type FormEvent } from "react";
 
 import {
   discoverFeed,
+  ClientApiError,
   feedCreationErrorMessage,
   saveFeedPreview,
   type FeedPreview,
 } from "../lib/client/api-client.ts";
 import { FeedPreviewList } from "./feed-preview-list.tsx";
+import { ErrorState } from "./error-state.tsx";
+import { LoadingState } from "./loading-state.tsx";
 
 export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [sourceUrl, setSourceUrl] = useState("");
   const [feedName, setFeedName] = useState("");
   const [preview, setPreview] = useState<FeedPreview | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message: string; requestId?: string } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -24,11 +27,11 @@ export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
     event.preventDefault();
     const url = sourceUrl.trim();
     if (!url) {
-      setError("Enter a website or feed URL.");
+      setError({ message: "Enter a website or feed URL." });
       return;
     }
 
-    setError("");
+    setError(null);
     setPreview(null);
     setDiscovering(true);
     try {
@@ -36,7 +39,10 @@ export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
       setPreview(result);
       setFeedName(result.feedTitle);
     } catch (requestError) {
-      setError(feedCreationErrorMessage(requestError));
+      setError({
+        message: feedCreationErrorMessage(requestError),
+        requestId: requestError instanceof ClientApiError ? requestError.requestId : undefined,
+      });
     } finally {
       setDiscovering(false);
     }
@@ -44,13 +50,16 @@ export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
 
   async function save() {
     if (!preview?.previewItems.length || !feedName.trim()) return;
-    setError("");
+    setError(null);
     setSaving(true);
     try {
       const feed = await saveFeedPreview(workspaceId, preview, feedName.trim());
       router.push(`/dashboard/feeds/${feed.id}`);
     } catch (requestError) {
-      setError(feedCreationErrorMessage(requestError));
+      setError({
+        message: feedCreationErrorMessage(requestError),
+        requestId: requestError instanceof ClientApiError ? requestError.requestId : undefined,
+      });
       setSaving(false);
     }
   }
@@ -71,7 +80,7 @@ export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
             onChange={(event) => {
               setSourceUrl(event.target.value);
               setPreview(null);
-              setError("");
+              setError(null);
             }}
             disabled={discovering || saving}
             required
@@ -82,7 +91,8 @@ export function FeedCreateForm({ workspaceId }: { workspaceId: string }) {
         </div>
       </form>
 
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      {discovering ? <LoadingState label="Checking this source…" /> : null}
+      {error ? <ErrorState message={error.message} requestId={error.requestId} /> : null}
 
       {preview ? (
         <>

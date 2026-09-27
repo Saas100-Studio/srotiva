@@ -26,15 +26,18 @@ export type FeedPreview = {
 type ApiEnvelope<T> = {
   data?: T;
   error?: { code?: string; message?: string };
+  requestId?: string;
 };
 
 export class ClientApiError extends Error {
   readonly code: string;
+  readonly requestId?: string;
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, requestId?: string) {
     super(message);
     this.name = "ClientApiError";
     this.code = code;
+    this.requestId = requestId;
   }
 }
 
@@ -58,6 +61,7 @@ async function request<T>(url: string, init: RequestInit, fetcher: typeof fetch)
     throw new ClientApiError(
       result.error?.code ?? "REQUEST_FAILED",
       result.error?.message ?? "Unable to complete the request.",
+      result.requestId ?? response.headers.get("x-request-id") ?? undefined,
     );
   }
   return result.data;

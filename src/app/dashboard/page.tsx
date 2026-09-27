@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 
 import { FeedStatusBadge } from "../../components/feed-status-badge.tsx";
+import { EmptyState } from "../../components/empty-state.tsx";
 import { getOptionalCurrentUserFromCookieHeader } from "../../lib/auth/current-user.ts";
 import { requireDashboardUser } from "../../lib/auth/dashboard.ts";
 import { listFeeds } from "../../lib/db/repositories/feeds.ts";
@@ -27,11 +28,13 @@ export function DashboardIndex({
       </div>
 
       {feeds.length === 0 ? (
-        <div className="empty-state">
-          <h2>Create your first feed</h2>
+        <EmptyState
+          title="Create your first feed"
+          labelledBy="dashboard-empty-heading"
+          action={<Link className="button" href="/dashboard/feeds/new">Create feed</Link>}
+        >
           <p>Paste a public website or RSS/Atom URL, preview it, and publish the output.</p>
-          <Link className="button" href="/dashboard/feeds/new">Create feed</Link>
-        </div>
+        </EmptyState>
       ) : (
         <section className="feed-list" aria-labelledby="recent-feeds-heading">
           <h2 id="recent-feeds-heading">Recent feeds</h2>
