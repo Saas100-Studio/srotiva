@@ -2,8 +2,10 @@ import { FeedSourceKind, FeedSourceType, FeedStatus, FeedVisibility, Prisma } fr
 import { randomUUID } from "node:crypto";
 
 import { MorselApiError } from "../api/errors.ts";
+import { loadEnv } from "../config/env.ts";
 import { normalizeUserUrl } from "../crawler/url-safety.ts";
 import { getDb } from "../db/client.ts";
+import { createPrivateFeedToken, hashPrivateFeedToken } from "./feed-output-token.ts";
 import { createItemFingerprint } from "./fingerprint.ts";
 
 type JsonObject = Record<string, Prisma.JsonValue>;
@@ -117,6 +119,11 @@ function slugBase(title: string, sourceUrl: string): string {
 
 export async function saveFeed(input: SaveFeedInput, createdByUserId: string) {
   const slug = `${slugBase(input.feedTitle, input.sourceUrl)}-${randomUUID()}`;
+  const feedId = randomUUID();
+  const outputSlug = randomUUID();
+  const privateToken = createPrivateFeedToken(feedId);
+  const publicTokenHash = hashPrivateFeedToken(privateToken);
+  const outputUrl = `${loadEnv().APP_URL}/f/${outputSlug}`;
   const uniqueItems = new Map<string, SaveItem>();
   for (const previewItem of input.previewItems) {
     const fingerprint = createItemFingerprint({ feedUrl: input.sourceUrl, canonicalUrl: previewItem.canonicalUrl, sourceItemId: previewItem.sourceItemId, title: previewItem.title, datePublished: previewItem.datePublished });
@@ -125,10 +132,11 @@ export async function saveFeed(input: SaveFeedInput, createdByUserId: string) {
   return getDb().$transaction(async (tx) => {
     const feed = await tx.feed.create({
       data: {
-        workspaceId: input.workspaceId, createdByUserId, name: input.feedTitle, slug,
+        id: feedId, workspaceId: input.workspaceId, createdByUserId, name: input.feedTitle, slug, outputSlug, publicTokenHash,
         description: input.feedDescription, status: FeedStatus.ACTIVE,
         visibility: FeedVisibility.PRIVATE, sourceType: input.sourceType,
         sourceUrl: input.sourceUrl, refreshIntervalMinutes: 1440,
+        publicRssUrl: `${outputUrl}/rss`, publicJsonUrl: `${outputUrl}/json`, publicCsvUrl: `${outputUrl}/csv`,
         sources: { create: { kind: input.sourceKind, url: input.sourceUrl } },
       },
     });
@@ -139,6 +147,6 @@ export async function saveFeed(input: SaveFeedInput, createdByUserId: string) {
       })),
       skipDuplicates: true,
     });
-    return feed;
+    return { feed, privateToken, outputBaseUrl: outputUrl };
   });
 }

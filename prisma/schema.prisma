@@ -202,6 +202,8 @@ model Feed {
   workspaceId            String         @map("workspace_id") @db.Uuid
   name                   String         @db.Text
   slug                   String         @db.Text
+  outputSlug             String         @unique(map: "feeds_output_slug_key") @default(uuid()) @map("output_slug") @db.Text
+  publicTokenHash        String?        @map("public_token_hash") @db.Text
   description            String?        @db.Text
   status                 FeedStatus     @default(DRAFT)
   visibility             FeedVisibility @default(PRIVATE)

@@ -4,7 +4,9 @@ import { MorselApiError } from "../../../../lib/api/errors.ts";
 import { createRequestContext } from "../../../../lib/api/request-context.ts";
 import { jsonError, jsonOk } from "../../../../lib/api/responses.ts";
 import { requireWorkspaceRole } from "../../../../lib/auth/workspace-access.ts";
-import { findFeedDetail, softDeleteFeed, updateFeed, type FeedPatch } from "../../../../lib/db/repositories/feeds.ts";
+import { loadEnv } from "../../../../lib/config/env.ts";
+import { findFeedDetail, initializePrivateFeedToken, softDeleteFeed, updateFeed, type FeedPatch } from "../../../../lib/db/repositories/feeds.ts";
+import { createPrivateFeedToken, hashPrivateFeedToken } from "../../../../lib/feed/feed-output-token.ts";
 
 function routeError(error: unknown): unknown {
   if (!(error instanceof MorselApiError)) return error;
@@ -27,6 +29,19 @@ async function access(request: Request, role: typeof WorkspaceRole.EDITOR | type
   return workspace;
 }
 function validId(value: string): boolean { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+async function responseFeed(workspace: string, feed: NonNullable<Awaited<ReturnType<typeof findFeedDetail>>>) {
+  const privateToken = feed.visibility === FeedVisibility.PRIVATE ? createPrivateFeedToken(feed.id) : null;
+  if (privateToken) await initializePrivateFeedToken(workspace, feed.id, hashPrivateFeedToken(privateToken));
+  const suffix = privateToken ? `?token=${encodeURIComponent(privateToken)}` : "";
+  const base = `${loadEnv().APP_URL}/f/${feed.outputSlug}`;
+  return {
+    ...feed,
+    itemCount: feed._count.items,
+    _count: undefined,
+    ...(privateToken ? { privateToken } : {}),
+    outputUrls: { rss: `${base}/rss${suffix}`, json: `${base}/json${suffix}`, csv: `${base}/csv${suffix}` },
+  };
+}
 
 export async function handleFeedGet(request: Request, feedId: string): Promise<Response> {
   try {
@@ -34,7 +49,7 @@ export async function handleFeedGet(request: Request, feedId: string): Promise<R
     const workspace = await access(request, WorkspaceRole.VIEWER);
     const feed = await findFeedDetail(workspace, feedId);
     if (!feed) throw notFound();
-    return jsonOk({ ...feed, itemCount: feed._count.items, _count: undefined });
+    return jsonOk(await responseFeed(workspace, feed));
   } catch (error) { return jsonError(routeError(error)); }
 }
 
@@ -67,7 +82,7 @@ export async function handleFeedPatch(request: Request, feedId: string): Promise
     }
     const feed = await updateFeed(workspace, feedId, patch);
     if (!feed) throw notFound();
-    return jsonOk({ ...feed, itemCount: feed._count.items, _count: undefined });
+    return jsonOk(await responseFeed(workspace, feed));
   } catch (error) { return jsonError(routeError(error)); }
 }
 

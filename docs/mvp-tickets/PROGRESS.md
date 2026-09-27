@@ -6,8 +6,8 @@ Use this file to help Codex agents understand the current implementation state w
 
 ## Current State
 
-- Current sprint: Sprint 02 - Discovery and Creation APIs
-- Next ticket (not started): `S02-T05-public-output-endpoints.md`
+- Current sprint: Sprint 03 - User Dashboard
+- Next ticket (not started): `S03-T01-dashboard-shell.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -61,7 +61,7 @@ Do not write real secrets in this file.
 | S02-T02 Static HTML Extractor | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/html-extractor.test.ts`; `bun run check` | Deterministic static article/card extraction, URL normalization, exact URL deduplication, plain-text description cleanup, confidence enforcement, fingerprints, fallback images, and the 25-item preview cap are complete. All 100 tests, lint, strict typecheck, and production build pass. |
 | S02-T03 Feed Discover Preview API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-discover-api.test.ts`; `bun run check` | Authenticated active-workspace previews prefer direct or discovered RSS/Atom, fall back to static HTML, cap results at 10 items, preserve crawler safety and robots checks, validate request shapes, return stable ticket error codes, and write no feed rows. All 110 tests, lint, strict typecheck, and production build pass. |
 | S02-T04 Feed Save and Items API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-save-api.test.ts src/test/feed-items-api.test.ts`; `bun run check` | Atomic native/webpage saves, server-recomputed exact fingerprints, tenant-role enforcement, feed CRUD, projected detail/list/item responses, null-last cursor pagination, cross-workspace mutation guards, and row-retaining soft delete are complete. All 113 tests, lint, strict typecheck, and production build pass. No migration or dependency was needed. |
-| S02-T05 Public RSS, JSON, and CSV Output Endpoints | Not Started |  |  |  |
+| S02-T05 Public RSS, JSON, and CSV Output Endpoints | Done | `main` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `node --env-file-if-exists=.env.local --test src/test/public-output-routes.test.ts src/test/feed-save-api.test.ts src/test/feed-renderers.test.ts src/test/csv-safety.test.ts`; `bun run check` | Globally unique output slugs, hashed deterministic private tokens, owner-facing tokenized URLs, public/unlisted/private access, active-only bounded items, canonical token-free RSS self links, cache policies, and RSS/JSON/CSV routes are complete. Database and Prisma schema have no drift. All 114 tests, lint, strict typecheck, and production build pass. |
 | S03-T01 Authenticated Dashboard Shell | Not Started |  |  | First user-facing sprint starts here. |
 | S03-T02 Feed Creation UI | Not Started |  |  |  |
 | S03-T03 Feed Detail UI | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S02-T05 needs no new environment variables.
+No blockers recorded. S03-T01 needs no new environment variables.
 
 ## Decisions
 
@@ -155,5 +155,6 @@ No blockers recorded. S02-T05 needs no new environment variables.
 - Discover native feeds from typed RSS/Atom alternate links first, then sequentially probe five same-origin conventional paths only when no valid hint exists. Reuse the secure fetcher and cached robots policy for every request, and validate probed documents with the native parser before returning them.
 - Parse static HTML with Cheerio because Node has no built-in server-side DOM parser. Prefer repeated `article` elements, then heading-based cards inside `main`; require at least two unique linked items, cap previews at 25, and return deterministic confidence and missing-field warning codes.
 - Keep preview item raw diagnostics in the authenticated discovery response so S02-T04 can save the preview without reformatting; network response-size limits and the 10-item preview cap bound the payload.
+- Give every feed a globally unique output slug. Derive private output tokens with HMAC-SHA256 from the random feed ID and `SESSION_SECRET`, store only a SHA-256 hash, and expose tokenized owner URLs only through authenticated feed responses. Public and unlisted outputs use public caching; private and denied responses use no-store. RSS self links use configured `APP_URL` without bearer tokens.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.

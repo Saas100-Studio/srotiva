@@ -2,10 +2,10 @@ import {
   FeedItemStatus,
   FeedSourceKind,
   FeedStatus,
+  FeedVisibility,
   type Feed,
   type FeedItem,
   type FeedSourceType,
-  type FeedVisibility,
   type Prisma,
 } from "@prisma/client";
 
@@ -16,11 +16,15 @@ const feedProjection = {
   workspaceId: true,
   name: true,
   slug: true,
+  outputSlug: true,
   description: true,
   status: true,
   visibility: true,
   sourceType: true,
   sourceUrl: true,
+  publicRssUrl: true,
+  publicJsonUrl: true,
+  publicCsvUrl: true,
   refreshIntervalMinutes: true,
   lastRefreshedAt: true,
   nextRefreshAt: true,
@@ -59,6 +63,58 @@ export function findFeedDetail(workspaceId: string, feedId: string) {
       },
       _count: { select: { items: true } },
     },
+  });
+}
+
+export function findActiveFeedByOutputSlug(outputSlug: string) {
+  return getDb().feed.findFirst({
+    where: { outputSlug, status: FeedStatus.ACTIVE, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      sourceUrl: true,
+      outputSlug: true,
+      visibility: true,
+      publicTokenHash: true,
+      settings: true,
+    },
+  });
+}
+
+export function listActiveOutputItems(feedId: string, limit: number) {
+  return getDb().feedItem.findMany({
+    where: {
+      feedId,
+      status: FeedItemStatus.ACTIVE,
+      feed: { status: FeedStatus.ACTIVE, deletedAt: null },
+    },
+    select: {
+      sourceItemId: true,
+      fingerprint: true,
+      canonicalUrl: true,
+      url: true,
+      title: true,
+      descriptionText: true,
+      descriptionHtml: true,
+      author: true,
+      imageUrl: true,
+      datePublished: true,
+      dateModified: true,
+    },
+    orderBy: [
+      { datePublished: { sort: "desc", nulls: "last" } },
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
+    take: limit,
+  });
+}
+
+export function initializePrivateFeedToken(workspaceId: string, feedId: string, publicTokenHash: string) {
+  return getDb().feed.updateMany({
+    where: { id: feedId, workspaceId, visibility: FeedVisibility.PRIVATE, publicTokenHash: null },
+    data: { publicTokenHash },
   });
 }
 

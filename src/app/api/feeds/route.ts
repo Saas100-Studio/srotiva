@@ -24,9 +24,20 @@ export async function POST(request: Request): Promise<Response> {
     if (input.workspaceId !== context.workspace.id) throw new MorselApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
     await requireWorkspaceRole({ userId: context.user.id, workspaceId: input.workspaceId, roles: [WorkspaceRole.EDITOR] });
     const saved = await saveFeed(input, context.user.id);
-    const feed = await findFeedDetail(input.workspaceId, saved.id);
+    const feed = await findFeedDetail(input.workspaceId, saved.feed.id);
     if (!feed) throw new MorselApiError(500, "INTERNAL_ERROR", "The saved feed could not be read.");
-    return jsonOk({ ...feed, itemCount: feed._count.items, _count: undefined }, { status: 201 });
+    const token = encodeURIComponent(saved.privateToken);
+    return jsonOk({
+      ...feed,
+      itemCount: feed._count.items,
+      _count: undefined,
+      privateToken: saved.privateToken,
+      outputUrls: {
+        rss: `${saved.outputBaseUrl}/rss?token=${token}`,
+        json: `${saved.outputBaseUrl}/json?token=${token}`,
+        csv: `${saved.outputBaseUrl}/csv?token=${token}`,
+      },
+    }, { status: 201 });
   } catch (error) {
     return jsonError(routeError(error));
   }
