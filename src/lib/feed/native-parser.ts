@@ -33,6 +33,11 @@ export type ParseNativeFeedInput = {
   contentType?: string | null;
 };
 
+export type ParsedNativeFeedDocument = {
+  type: "rss" | "atom";
+  feed: ParsedNativeFeed;
+};
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -206,7 +211,9 @@ function normalizeAtomItem(value: unknown, feedUrl: string): NativeFeedItem | nu
   };
 }
 
-export function parseNativeFeed(input: ParseNativeFeedInput): ParsedNativeFeed {
+export function parseNativeFeedDocument(
+  input: ParseNativeFeedInput,
+): ParsedNativeFeedDocument {
   if (XMLValidator.validate(input.bodyText) !== true) throw invalidFeed(input);
 
   let document: XmlRecord;
@@ -219,26 +226,36 @@ export function parseNativeFeed(input: ParseNativeFeedInput): ParsedNativeFeed {
   const channel = record(record(document.rss)?.channel);
   if (channel) {
     return {
-      feedTitle: text(channel.title),
-      feedDescription: text(channel.description),
-      siteUrl: resolvedUrl(channel.link, input.url),
-      items: list(channel.item)
-        .map((item) => normalizeRssItem(item, input.url))
-        .filter((item): item is NativeFeedItem => item !== null),
+      type: "rss",
+      feed: {
+        feedTitle: text(channel.title),
+        feedDescription: text(channel.description),
+        siteUrl: resolvedUrl(channel.link, input.url),
+        items: list(channel.item)
+          .map((item) => normalizeRssItem(item, input.url))
+          .filter((item): item is NativeFeedItem => item !== null),
+      },
     };
   }
 
   const feed = record(document.feed);
   if (feed) {
     return {
-      feedTitle: text(feed.title),
-      feedDescription: text(feed.subtitle),
-      siteUrl: atomLink(feed.link, input.url),
-      items: list(feed.entry)
-        .map((entry) => normalizeAtomItem(entry, input.url))
-        .filter((item): item is NativeFeedItem => item !== null),
+      type: "atom",
+      feed: {
+        feedTitle: text(feed.title),
+        feedDescription: text(feed.subtitle),
+        siteUrl: atomLink(feed.link, input.url),
+        items: list(feed.entry)
+          .map((entry) => normalizeAtomItem(entry, input.url))
+          .filter((item): item is NativeFeedItem => item !== null),
+      },
     };
   }
 
   throw invalidFeed(input);
+}
+
+export function parseNativeFeed(input: ParseNativeFeedInput): ParsedNativeFeed {
+  return parseNativeFeedDocument(input).feed;
 }

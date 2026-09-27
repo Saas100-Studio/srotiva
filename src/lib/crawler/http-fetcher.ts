@@ -37,6 +37,7 @@ export type FetchDocumentOptions = {
   userAgent?: string;
   fetchImpl?: FetchImplementation;
   lookup?: DnsResolver;
+  beforeRedirect?: (url: URL) => Promise<void>;
 };
 
 export type FetchDocumentResult = {
@@ -58,7 +59,7 @@ function fetchError(
   return new MorselApiError(status, code, message, details);
 }
 
-function configuredUserAgent(): string {
+export function getCrawlerUserAgent(): string {
   const userAgent = process.env.CRAWLER_USER_AGENT?.trim();
   if (!userAgent) throw new Error("CRAWLER_USER_AGENT is required.");
   return userAgent;
@@ -242,7 +243,7 @@ export async function fetchDocument(
   const maxRedirects = validateRedirectLimit(
     options.maxRedirects ?? DEFAULT_FETCH_MAX_REDIRECTS,
   );
-  const userAgent = options.userAgent ?? configuredUserAgent();
+  const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const request = options.fetchImpl ?? requestPinnedDocument;
   const startedAt = performance.now();
   const controller = new AbortController();
@@ -298,6 +299,7 @@ export async function fetchDocument(
           originalHostname,
           { lookup: options.lookup },
         );
+        await options.beforeRedirect?.(safeRedirect.url);
         currentUrl = safeRedirect.url;
         resolvedAddresses = safeRedirect.resolvedAddresses;
         redirects += 1;
