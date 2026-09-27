@@ -1,0 +1,138 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+import {
+  FeedSourceType,
+  RefreshJobStatus,
+  RefreshTrigger,
+} from "@prisma/client";
+
+import { getDb } from "../lib/db/client.ts";
+import { createFeed } from "../lib/db/repositories/feeds.ts";
+import { createUser } from "../lib/db/repositories/users.ts";
+import { createWorkspaceWithOwner } from "../lib/db/repositories/workspaces.ts";
+import {
+  claimNextRefreshJob,
+  completeRefreshJob,
+  enqueueRefreshJob,
+  failRefreshJob,
+} from "../lib/jobs/refresh-queue.ts";
+
+test("database refresh queue lifecycle", async (t) => {
+  assert.ok(process.env.DATABASE_URL, "DATABASE_URL must point to a migrated test database");
+
+  const db = getDb();
+  const suffix = `${Date.now()}-${crypto.randomUUID()}`;
+  const user = await createUser({
+    email: `queue-${suffix}@morsel.test`,
+    passwordHash: "test-password-hash",
+  });
+  const workspace = await createWorkspaceWithOwner({
+    userId: user.id,
+    name: "Queue Test Workspace",
+    slug: `queue-${suffix}`,
+  });
+  const feed = await createFeed({
+    workspaceId: workspace.id,
+    createdByUserId: user.id,
+    name: "Queue Test Feed",
+    slug: "queue-test-feed",
+    sourceType: FeedSourceType.NATIVE,
+    sourceUrl: "https://example.com/feed.xml",
+    refreshIntervalMinutes: 60,
+  });
+
+  try {
+    const low = await enqueueRefreshJob({
+      workspaceId: workspace.id,
+      feedId: feed.id,
+      trigger: RefreshTrigger.SCHEDULED,
+      priority: 1_000_000_000,
+    });
+    const oldestHigh = await enqueueRefreshJob({
+      workspaceId: workspace.id,
+      feedId: feed.id,
+      trigger: RefreshTrigger.MANUAL,
+      priority: 2_000_000_000,
+    });
+    const newerHigh = await enqueueRefreshJob({
+      workspaceId: workspace.id,
+      feedId: feed.id,
+      trigger: RefreshTrigger.RETRY,
+      priority: 2_000_000_000,
+    });
+    const locked = await enqueueRefreshJob({
+      workspaceId: workspace.id,
+      feedId: feed.id,
+      trigger: RefreshTrigger.ADMIN,
+      priority: 2_100_000_000,
+    });
+
+    assert.equal(low.status, RefreshJobStatus.QUEUED);
+
+    await Promise.all([
+      db.feedRefreshJob.update({
+        where: { id: oldestHigh.id },
+        data: { createdAt: new Date("2026-01-01T00:00:00Z") },
+      }),
+      db.feedRefreshJob.update({
+        where: { id: newerHigh.id },
+        data: { createdAt: new Date("2026-01-02T00:00:00Z") },
+      }),
+      db.feedRefreshJob.update({
+        where: { id: locked.id },
+        data: { lockedAt: new Date(), lockedBy: "other-worker" },
+      }),
+    ]);
+
+    await t.test("claims the oldest highest-priority unlocked job", async () => {
+      const claimed = await claimNextRefreshJob({ workerId: "queue-test-worker" });
+
+      assert.equal(claimed?.id, oldestHigh.id);
+      assert.equal(claimed?.status, RefreshJobStatus.RUNNING);
+      assert.equal(claimed?.lockedBy, "queue-test-worker");
+      assert.equal(claimed?.attempt, 1);
+      assert.ok(claimed?.startedAt);
+      assert.ok(claimed?.lockedAt);
+
+      const skipped = await db.feedRefreshJob.findUniqueOrThrow({ where: { id: locked.id } });
+      assert.equal(skipped.status, RefreshJobStatus.QUEUED);
+      assert.equal(skipped.lockedBy, "other-worker");
+    });
+
+    await t.test("completes a running job with result counts", async () => {
+      const completed = await completeRefreshJob({
+        jobId: oldestHigh.id,
+        result: { itemsFound: 5, itemsNew: 3, itemsChanged: 1 },
+      });
+
+      assert.equal(completed.status, RefreshJobStatus.SUCCEEDED);
+      assert.equal(completed.itemsFound, 5);
+      assert.equal(completed.itemsNew, 3);
+      assert.equal(completed.itemsChanged, 1);
+      assert.ok(completed.finishedAt);
+    });
+
+    await t.test("fails a running job with a recorded error", async () => {
+      const claimed = await claimNextRefreshJob({ workerId: "queue-test-worker" });
+      assert.equal(claimed?.id, newerHigh.id);
+
+      const retryAt = new Date("2026-01-03T00:00:00Z");
+      const failed = await failRefreshJob({
+        jobId: newerHigh.id,
+        error: { code: "FETCH_FAILED", message: "Source fetch failed" },
+        retryAt,
+      });
+
+      assert.equal(failed.status, RefreshJobStatus.FAILED);
+      assert.equal(failed.errorCode, "FETCH_FAILED");
+      assert.equal(failed.errorMessage, "Source fetch failed");
+      assert.deepEqual(failed.nextRetryAt, retryAt);
+      assert.ok(failed.finishedAt);
+    });
+  } finally {
+    await db.workspace.delete({ where: { id: workspace.id } });
+    await db.user.delete({ where: { id: user.id } });
+    await db.$disconnect();
+  }
+});

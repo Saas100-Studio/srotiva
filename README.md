@@ -17,6 +17,16 @@ bun install
 bun run dev
 ```
 
+In separate terminals, start the refresh worker and scheduler processes:
+
+```bash
+bun run worker:refresh
+bun run scheduler
+```
+
+These placeholders currently print readiness and exit cleanly. The worker
+pipeline and due-feed scheduler are added in the next Sprint 04 tickets.
+
 Required environment variables:
 
 - `APP_URL`: Public base URL for the app. Use `http://localhost:3000` locally.

@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 04 - Refresh Jobs
-- Next ticket (not started): `S04-T01-refresh-queue-and-worker-shell.md`
+- Next ticket (not started): `S04-T02-refresh-worker-pipeline.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -66,7 +66,7 @@ Do not write real secrets in this file.
 | S03-T02 Feed Creation UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-create-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Authenticated URL discovery, native/webpage preview labels, plain-language unsafe/empty-source errors, warning states, name override, stale-preview protection, guarded save, and feed-detail redirect are complete. All 119 tests, lint, strict typecheck, and production build pass. No dependency, API, or database changes were needed. |
 | S03-T03 Feed Detail UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-detail-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped feed details, source and schedule metadata, private/public output links, item previews, refresh history, copy controls, and role-aware pause/resume/delete actions are complete. Delete uses a native confirmation and manual refresh remains deferred to Sprint 04. All 123 tests, lint, strict typecheck, and production build pass. |
 | S03-T04 Help, Empty States, and Error States | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/help-and-states.test.ts src/test/feed-create-ui.test.ts src/test/feed-detail-ui.test.ts src/test/dashboard-shell.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Static MVP help covers feed creation, native feeds versus webpage extraction, output formats, and common failures. Reusable accessible empty, error, and loading states now guide dashboard, creation, and detail flows; API errors retain request IDs and link to troubleshooting. All 127 tests, lint, strict typecheck, and production build pass. |
-| S04-T01 Refresh Queue and Worker Shell | Not Started |  |  | MVP uses database-backed jobs first. |
+| S04-T01 Refresh Queue and Worker Shell | Done | `main` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `node --env-file-if-exists=.env.local --test src/test/refresh-queue.test.ts`; `bun run worker:refresh`; `bun run scheduler`; `bun run lint`; `bun run typecheck`; `bun run check` | PostgreSQL-backed enqueue, atomic priority/FIFO claim with `FOR UPDATE SKIP LOCKED`, result/error transitions, lock and retry fields, and harmless worker/scheduler placeholders are complete. Database and Prisma schema have no drift. All 131 tests, lint, strict typecheck, and production build pass. |
 | S04-T02 Refresh Worker Pipeline | Not Started |  |  |  |
 | S04-T03 Manual Refresh API and Throttle | Not Started |  |  |  |
 | S04-T04 Scheduler and Feed Health | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S04-T01 needs no new environment variables.
+No blockers recorded. S04-T02 needs no new environment variables.
 
 ## Decisions
 
@@ -144,6 +144,7 @@ No blockers recorded. S04-T01 needs no new environment variables.
 - Enforce matching feed and workspace IDs for feed items, feed filters, and refresh jobs with composite foreign keys to prevent cross-workspace records.
 - Database tests create uniquely named records, remove them after each suite, and load `.env.local` only when it exists so CI-provided environment variables remain supported.
 - Use database-backed refresh jobs for MVP before adding Redis/BullMQ.
+- Claim one refresh job atomically with PostgreSQL `FOR UPDATE SKIP LOCKED`, highest priority first and FIFO within a priority. Keep the S04-T01 process entrypoints non-consuming until the pipeline and scheduler tickets provide real work.
 - Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
 - Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.

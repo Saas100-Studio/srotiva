@@ -330,6 +330,9 @@ model FeedRefreshJob {
   priority     Int              @default(0)
   startedAt    DateTime?        @map("started_at") @db.Timestamptz
   finishedAt   DateTime?        @map("finished_at") @db.Timestamptz
+  lockedAt     DateTime?        @map("locked_at") @db.Timestamptz
+  lockedBy     String?          @map("locked_by") @db.Text
+  nextRetryAt  DateTime?        @map("next_retry_at") @db.Timestamptz
   attempt      Int              @default(0)
   itemsFound   Int              @default(0) @map("items_found")
   itemsNew     Int              @default(0) @map("items_new")

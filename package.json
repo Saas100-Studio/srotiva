@@ -12,6 +12,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "worker:refresh": "node --env-file-if-exists=.env.local src/workers/refresh-worker.ts",
+    "scheduler": "node --env-file-if-exists=.env.local src/workers/scheduler.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "check": "bun run lint && bun run typecheck && bun run test && bun run build"
