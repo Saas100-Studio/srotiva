@@ -6,8 +6,8 @@ Use this file to help Codex agents understand the current implementation state w
 
 ## Current State
 
-- Current sprint: Sprint 01 - Feed Engine Core
-- Next ticket (not started): `S01-T04-feed-renderers.md`
+- Current sprint: Sprint 02 - Discovery and Creation APIs
+- Next ticket (not started): `S02-T01-native-feed-discovery.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -56,7 +56,7 @@ Do not write real secrets in this file.
 | S01-T01 URL Safety and SSRF Protection | Done | `main` | `node --test src/test/url-safety.test.ts`; `bun run check` | Canonical HTTP(S) URL validation, credential and port rejection, deterministic DNS resolution, public-IP enforcement across IPv4/IPv6, metadata and localhost blocking, and redirect-target revalidation are complete. All 58 tests, lint, strict typecheck, and production build pass. No HTTP requests or new dependencies were added. |
 | S01-T02 HTTP Fetcher and Robots Policy | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts`; `bun run lint`; `bun run typecheck`; `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts src/test/url-safety.test.ts`; `bun run check` | DNS-pinned manual redirects, streamed size limits, discarded-body cancellation, request timeout, crawler user-agent, structured results/errors, exact product-token robots policy, and a 10-minute process cache are complete. All 71 tests, lint, strict typecheck, and production build pass. |
 | S01-T03 Native Feed Parser and Fingerprints | Done | `main` | `bun add fast-xml-parser`; `node --env-file-if-exists=.env.local --test src/test/native-parser.test.ts src/test/fingerprint.test.ts`; `bun run check` | RSS 2.0 and Atom 1.0 normalization, diagnostic raw fields, media/enclosure images, deterministic SHA-256 fingerprints, safe standard XML entity decoding, URL scheme filtering, and invalid-feed errors are complete. All 81 tests, lint, strict typecheck, and production build pass. |
-| S01-T04 Feed Renderers | Not Started |  |  |  |
+| S01-T04 Feed Renderers | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-renderers.test.ts src/test/csv-safety.test.ts`; `bun run check` | Deterministic RSS 2.0, explicitly projected JSON, spreadsheet-safe CSV, and public/private cache policies are complete. All 87 tests, lint, strict typecheck, and production build pass. No dependency or database changes were needed. |
 | S02-T01 Native Feed Discovery | Not Started |  |  |  |
 | S02-T02 Static HTML Extractor | Not Started |  |  |  |
 | S02-T03 Feed Discover Preview API | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S01-T03 needs no new environment variables.
+No blockers recorded. S01-T04 needs no new environment variables.
 
 ## Decisions
 
@@ -151,5 +151,6 @@ No blockers recorded. S01-T03 needs no new environment variables.
 - Fail URL safety closed: allow only HTTP/HTTPS without credentials on ports 80/443, require every DNS answer to be a public IPv4/IPv6 address, and re-run the same validation for redirects. Literal and obfuscated IP hosts are normalized before range checks; URL fragments are removed because they are not sent in HTTP requests.
 - Follow redirects manually with a five-hop default so each target is revalidated before network access, and pin each connection to its validated public addresses to prevent DNS rebinding. Cancel discarded bodies, stream accepted bodies under the configured byte cap, apply one timeout across the complete fetch, and treat non-2xx responses as stable fetch errors. Cache `robots.txt` by origin for ten minutes; combine exact product-token groups, fall back to the wildcard group, and use longest-rule precedence with `Allow` winning ties.
 - Use `fast-xml-parser` with entity processing disabled for RSS 2.0 and Atom 1.0 normalization. Fingerprint items with Node's SHA-256 in canonical URL, source ID, then normalized title/date priority, always scoped by feed URL.
+- Render normalized feeds with deterministic RSS 2.0, explicitly projected public JSON (excluding raw diagnostics), and stable-column CSV serializers. Prefix CSV cells whose first non-whitespace character is `=`, `+`, `-`, or `@`; public output may cache for 60 seconds with 300 seconds stale-while-revalidate, while tokenized private output is `no-store`.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.
