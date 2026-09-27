@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Morsel Atom</title>
+  <subtitle>A basic Atom fixture</subtitle>
+  <link href="https://example.org/" rel="alternate" />
+  <entry>
+    <id>tag:example.org,2025:2</id>
+    <title>First Atom entry</title>
+    <link href="https://example.org/posts/2" rel="alternate" />
+    <link href="https://example.org/images/2.png" rel="enclosure" type="image/png" />
+    <summary type="html">&lt;p&gt;Atom summary&lt;/p&gt;</summary>
+    <author><name>Atom Writer</name></author>
+    <published>2025-09-02T11:00:00Z</published>
+    <updated>2025-09-02T12:00:00Z</updated>
+  </entry>
+</feed>

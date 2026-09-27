@@ -1,13 +1,13 @@
 # Morsel MVP Progress
 
-Last updated: 2026-08-27
+Last updated: 2026-09-27
 
 Use this file to help Codex agents understand the current implementation state without rereading the full PRD. Update it after every ticket.
 
 ## Current State
 
 - Current sprint: Sprint 01 - Feed Engine Core
-- Next ticket (not started): `S01-T03-native-feed-parser-and-fingerprints.md`
+- Next ticket (not started): `S01-T04-feed-renderers.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -36,7 +36,7 @@ Do not write real secrets in this file.
 | Need | Required By | Status | Notes |
 | --- | --- | --- | --- |
 | `APP_URL` | S00-T01 | Documented | Local value can be `http://localhost:3000`. |
-| `DATABASE_URL` | S00-T02 | Configured; migrations verified | Present in `.env.local`. The initial schema and feed/workspace tenancy migrations, seed, schema tests, and full verification passed by 2026-07-23. |
+| `DATABASE_URL` | S00-T02 | Configured; migrations verified | Present in `.env.local`. Database-backed tests pass; a transient Neon outage was observed before S01-T03 and cleared on retry. |
 | `SESSION_SECRET` | S00-T01, S00-T03 | Configured | A generated 64-character secret is present in `.env.local`. Do not copy it into source control or documentation. |
 | `CRAWLER_USER_AGENT` | S00-T01, S01-T02 | Configured | An identifiable product user agent is present in `.env.local`. |
 | `FETCH_TIMEOUT_MS` | S00-T01, S01-T02 | Configured | Present in `.env.local`; suggested local value is `10000`. |
@@ -55,7 +55,7 @@ Do not write real secrets in this file.
 | S00-T04 Authorization and Audit Logs | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/workspace-access.test.ts src/test/audit-log.test.ts src/test/auth-routes.test.ts`; `bun run check` | Owner/editor/viewer hierarchy, active-workspace request context, cross-workspace denial, audit helper, and successful signup/login/logout audit events are complete. Signup and its audit row commit atomically. Both required audit indexes already existed, so no migration was needed. All 42 tests, lint, strict typecheck, and production build pass. |
 | S01-T01 URL Safety and SSRF Protection | Done | `main` | `node --test src/test/url-safety.test.ts`; `bun run check` | Canonical HTTP(S) URL validation, credential and port rejection, deterministic DNS resolution, public-IP enforcement across IPv4/IPv6, metadata and localhost blocking, and redirect-target revalidation are complete. All 58 tests, lint, strict typecheck, and production build pass. No HTTP requests or new dependencies were added. |
 | S01-T02 HTTP Fetcher and Robots Policy | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts`; `bun run lint`; `bun run typecheck`; `node --env-file-if-exists=.env.local --test src/test/http-fetcher.test.ts src/test/robots-policy.test.ts src/test/url-safety.test.ts`; `bun run check` | DNS-pinned manual redirects, streamed size limits, discarded-body cancellation, request timeout, crawler user-agent, structured results/errors, exact product-token robots policy, and a 10-minute process cache are complete. All 71 tests, lint, strict typecheck, and production build pass. |
-| S01-T03 Native Feed Parser and Fingerprints | Not Started |  |  |  |
+| S01-T03 Native Feed Parser and Fingerprints | Done | `main` | `bun add fast-xml-parser`; `node --env-file-if-exists=.env.local --test src/test/native-parser.test.ts src/test/fingerprint.test.ts`; `bun run check` | RSS 2.0 and Atom 1.0 normalization, diagnostic raw fields, media/enclosure images, deterministic SHA-256 fingerprints, safe standard XML entity decoding, URL scheme filtering, and invalid-feed errors are complete. All 81 tests, lint, strict typecheck, and production build pass. |
 | S01-T04 Feed Renderers | Not Started |  |  |  |
 | S02-T01 Native Feed Discovery | Not Started |  |  |  |
 | S02-T02 Static HTML Extractor | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S01-T02 is complete. S01-T03 needs no new environment variables currently; deterministic native feed fixtures should be used instead of live network calls.
+No blockers recorded. S01-T03 needs no new environment variables.
 
 ## Decisions
 
@@ -150,5 +150,6 @@ No blockers recorded. S01-T02 is complete. S01-T03 needs no new environment vari
 - Build request context from the authenticated user's active workspace and revalidate its active membership through the shared role helper. Successful password signup/login and authenticated logout events write user-targeted audit rows; signup creates its audit row in the account transaction so partial signup state cannot survive an audit failure. The required audit indexes were already present in the initial schema.
 - Fail URL safety closed: allow only HTTP/HTTPS without credentials on ports 80/443, require every DNS answer to be a public IPv4/IPv6 address, and re-run the same validation for redirects. Literal and obfuscated IP hosts are normalized before range checks; URL fragments are removed because they are not sent in HTTP requests.
 - Follow redirects manually with a five-hop default so each target is revalidated before network access, and pin each connection to its validated public addresses to prevent DNS rebinding. Cancel discarded bodies, stream accepted bodies under the configured byte cap, apply one timeout across the complete fetch, and treat non-2xx responses as stable fetch errors. Cache `robots.txt` by origin for ten minutes; combine exact product-token groups, fall back to the wildcard group, and use longest-rule precedence with `Allow` winning ties.
+- Use `fast-xml-parser` with entity processing disabled for RSS 2.0 and Atom 1.0 normalization. Fingerprint items with Node's SHA-256 in canonical URL, source ID, then normalized title/date priority, always scoped by feed URL.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.
