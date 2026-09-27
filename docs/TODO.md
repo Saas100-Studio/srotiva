@@ -9,6 +9,7 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Feed renderers: strip lone UTF-16 surrogates and other non-XML scalar values if renderers begin accepting text from outside the validated parser path.
 - Feed renderers: add semantic RSS validation against an external reader or validator when interoperability testing is introduced.
 - Feed discovery: replace the small alternate-link attribute scanner with an HTML parser if malformed real-world markup or broader entity decoding causes missed feeds.
-- S02-T03: recognize a directly submitted RSS/Atom URL before treating the response as an HTML page that needs discovery.
+- Feed discovery: avoid fetching an ordinary submitted webpage twice when native link discovery needs the already-fetched HTML.
+- Feed discovery: thread injected network collaborators through nested native discovery if tests need the real nested path without network access.
 - HTML extractor: add JSON-LD/OpenGraph article dates and lazy-loaded/srcset images when real fixture failures justify broader heuristics.
 - HTML extractor: broaden repeated-card detection beyond `article` and heading-based cards when production pages demonstrate a missed stable pattern.

@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 02 - Discovery and Creation APIs
-- Next ticket (not started): `S02-T03-feed-discover-preview-api.md`
+- Next ticket (not started): `S02-T04-feed-save-and-items-api.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -59,7 +59,7 @@ Do not write real secrets in this file.
 | S01-T04 Feed Renderers | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-renderers.test.ts src/test/csv-safety.test.ts`; `bun run check` | Deterministic RSS 2.0, explicitly projected JSON, spreadsheet-safe CSV, and public/private cache policies are complete. All 87 tests, lint, strict typecheck, and production build pass. No dependency or database changes were needed. |
 | S02-T01 Native Feed Discovery | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/native-feed-discovery.test.ts src/test/http-fetcher.test.ts src/test/robots-policy.test.ts src/test/native-parser.test.ts`; `bun run check` | Safe page fetch, RSS/Atom alternate-link discovery, final-URL resolution, deduplication, same-origin common-path probes, native-feed validation, and pre-redirect robots enforcement are complete. All 95 tests, lint, strict typecheck, and production build pass. |
 | S02-T02 Static HTML Extractor | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/html-extractor.test.ts`; `bun run check` | Deterministic static article/card extraction, URL normalization, exact URL deduplication, plain-text description cleanup, confidence enforcement, fingerprints, fallback images, and the 25-item preview cap are complete. All 100 tests, lint, strict typecheck, and production build pass. |
-| S02-T03 Feed Discover Preview API | Not Started |  |  |  |
+| S02-T03 Feed Discover Preview API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-discover-api.test.ts`; `bun run check` | Authenticated active-workspace previews prefer direct or discovered RSS/Atom, fall back to static HTML, cap results at 10 items, preserve crawler safety and robots checks, validate request shapes, return stable ticket error codes, and write no feed rows. All 110 tests, lint, strict typecheck, and production build pass. |
 | S02-T04 Feed Save and Items API | Not Started |  |  |  |
 | S02-T05 Public RSS, JSON, and CSV Output Endpoints | Not Started |  |  |  |
 | S03-T01 Authenticated Dashboard Shell | Not Started |  |  | First user-facing sprint starts here. |
@@ -154,5 +154,6 @@ No blockers recorded. S02-T03 needs no new environment variables.
 - Render normalized feeds with deterministic RSS 2.0, explicitly projected public JSON (excluding raw diagnostics), and stable-column CSV serializers. Prefix CSV cells whose first non-whitespace character is `=`, `+`, `-`, or `@`; public output may cache for 60 seconds with 300 seconds stale-while-revalidate, while tokenized private output is `no-store`.
 - Discover native feeds from typed RSS/Atom alternate links first, then sequentially probe five same-origin conventional paths only when no valid hint exists. Reuse the secure fetcher and cached robots policy for every request, and validate probed documents with the native parser before returning them.
 - Parse static HTML with Cheerio because Node has no built-in server-side DOM parser. Prefer repeated `article` elements, then heading-based cards inside `main`; require at least two unique linked items, cap previews at 25, and return deterministic confidence and missing-field warning codes.
+- Keep preview item raw diagnostics in the authenticated discovery response so S02-T04 can save the preview without reformatting; network response-size limits and the 10-item preview cap bound the payload.
 - Keep keyword/topic feed creation out of strict MVP; consider Google News keyword feeds as a post-MVP or MVP+ ticket.
 - Keep advanced integrations out of strict MVP until feed creation, refresh, filtering, and outputs are production-ready.
