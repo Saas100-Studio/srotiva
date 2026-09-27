@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head><meta property="og:image" content="/images/fallback.jpg"></head>
+  <body>
+    <nav><a href="/posts/one">Repeated navigation link</a></nav>
+    <main>
+      <article>
+        <h2><a href="/posts/one#comments">First story</a></h2>
+        <p>First <strong>summary</strong><script>bad()</script></p>
+        <img src="/images/one.jpg" alt="">
+        <time datetime="2026-09-25T10:00:00Z">September 25</time>
+      </article>
+      <article>
+        <h2><a href="/posts/two">Second story</a></h2>
+        <p>Second summary</p>
+        <time datetime="2026-09-24T09:00:00Z">September 24</time>
+      </article>
+      <article>
+        <h2><a href="https://example.com/posts/three">Third story</a></h2>
+        <p>Third summary<style>.bad { display: none }</style></p>
+        <img src="javascript:alert(1)" alt="">
+        <time datetime="not-a-date">Unknown date</time>
+      </article>
+      <article>
+        <h2><a href="/posts/one">Duplicate first story</a></h2>
+      </article>
+    </main>
+  </body>
+</html>
