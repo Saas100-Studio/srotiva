@@ -22,5 +22,7 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Feed detail UI: add browser-level coverage for clipboard, pause/resume, and confirmed deletion when the project adopts an end-to-end test harness.
 - Public outputs: before supporting `SESSION_SECRET` rotation, resynchronize private-token hashes on authenticated detail access or introduce a dedicated stable output-token secret.
 - Refresh queue: reclaim stale running jobs after a worker lease timeout once long-running workers are deployed.
-- Refresh queue: add concurrent-claim and future-`nextRetryAt` integration tests when S04-T02 turns the shell into a real worker.
-- Refresh queue: make terminal transitions retry-idempotent and worker-owned if production processing can redeliver completion or failure writes.
+- Refresh queue: add concurrent-claim and future-`nextRetryAt` integration tests if queue contention or retry scheduling becomes production-critical.
+- Refresh queue: make terminal transitions retry-idempotent if production processing can redeliver completion or failure writes; worker ownership is now enforced by the real worker.
+- Refresh pipeline: send conditional `If-None-Match`/`If-Modified-Since` requests and handle `304` once the shared fetcher accepts safe caller headers.
+- Refresh pipeline: persist `robotsStatus=disallowed` on robots denials and suppress noisy error logs for stale jobs that encounter an already paused or deleted feed.

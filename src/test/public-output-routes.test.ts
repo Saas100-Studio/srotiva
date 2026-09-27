@@ -112,6 +112,11 @@ test("public output routes enforce access and render one bounded active item set
     await db.feed.update({ where: { id }, data: { visibility: "UNLISTED" } });
     assert.equal((await route(getJson, outputSlug)).status, 200);
     assert.equal((await route(getJson, outputSlug)).headers.get("cache-control"), "public, max-age=60, stale-while-revalidate=300");
+    await db.feed.update({ where: { id }, data: { status: "DEGRADED" } });
+    assert.equal((await route(getJson, outputSlug)).status, 200);
+    await db.feed.update({ where: { id }, data: { status: "FAILED" } });
+    assert.equal((await route(getRss, outputSlug)).status, 200);
+    await db.feed.update({ where: { id }, data: { status: "ACTIVE" } });
 
     const legacy = await db.feed.create({
       data: {

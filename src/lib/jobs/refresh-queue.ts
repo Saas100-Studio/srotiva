@@ -55,12 +55,15 @@ export function claimNextRefreshJob({
 export async function completeRefreshJob({
   jobId,
   result,
+  workerId,
 }: {
   jobId: string;
   result: RefreshJobResult;
+  workerId: string;
 }): Promise<FeedRefreshJob> {
+  if (!workerId.trim()) throw new TypeError("workerId must not be empty");
   const updated = await getDb().feedRefreshJob.updateMany({
-    where: { id: jobId, status: RefreshJobStatus.RUNNING },
+    where: { id: jobId, status: RefreshJobStatus.RUNNING, lockedBy: workerId },
     data: {
       status: RefreshJobStatus.SUCCEEDED,
       finishedAt: new Date(),
@@ -84,13 +87,16 @@ export async function failRefreshJob({
   jobId,
   error,
   retryAt = null,
+  workerId,
 }: {
   jobId: string;
   error: RefreshJobError;
   retryAt?: Date | null;
+  workerId: string;
 }): Promise<FeedRefreshJob> {
+  if (!workerId.trim()) throw new TypeError("workerId must not be empty");
   const updated = await getDb().feedRefreshJob.updateMany({
-    where: { id: jobId, status: RefreshJobStatus.RUNNING },
+    where: { id: jobId, status: RefreshJobStatus.RUNNING, lockedBy: workerId },
     data: {
       status: RefreshJobStatus.FAILED,
       finishedAt: new Date(),

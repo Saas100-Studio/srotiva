@@ -1,4 +1,5 @@
 import {
+  ErrorSeverity,
   FeedItemStatus,
   FeedSourceKind,
   FeedStatus,
@@ -8,6 +9,7 @@ import {
   type FeedSourceType,
   type Prisma,
 } from "@prisma/client";
+import { isDeepStrictEqual } from "node:util";
 
 import { getDb } from "../client.ts";
 
@@ -69,7 +71,11 @@ export function findFeedDetail(workspaceId: string, feedId: string) {
 
 export function findActiveFeedByOutputSlug(outputSlug: string) {
   return getDb().feed.findFirst({
-    where: { outputSlug, status: FeedStatus.ACTIVE, deletedAt: null },
+    where: {
+      outputSlug,
+      status: { in: [FeedStatus.ACTIVE, FeedStatus.DEGRADED, FeedStatus.FAILED] },
+      deletedAt: null,
+    },
     select: {
       id: true,
       name: true,
@@ -88,7 +94,10 @@ export function listActiveOutputItems(feedId: string, limit: number) {
     where: {
       feedId,
       status: FeedItemStatus.ACTIVE,
-      feed: { status: FeedStatus.ACTIVE, deletedAt: null },
+      feed: {
+        status: { in: [FeedStatus.ACTIVE, FeedStatus.DEGRADED, FeedStatus.FAILED] },
+        deletedAt: null,
+      },
     },
     select: {
       sourceItemId: true,
@@ -313,5 +322,219 @@ export function upsertFeedItem({
       ...mutableData,
       lastSeenAt: now,
     },
+  });
+}
+
+export type RefreshItemInput = {
+  sourceItemId: string | null;
+  fingerprint: string;
+  canonicalUrl: string | null;
+  url: string | null;
+  title: string | null;
+  descriptionText: string | null;
+  descriptionHtml: string | null;
+  author: string | null;
+  imageUrl: string | null;
+  datePublished: Date | null;
+  dateModified: Date | null;
+  raw: Record<string, unknown>;
+};
+
+const refreshItemFields = [
+  "sourceItemId", "canonicalUrl", "url", "title", "descriptionText",
+  "descriptionHtml", "author", "imageUrl", "datePublished", "dateModified", "raw",
+] as const;
+
+function refreshItemChanged(
+  stored: Record<(typeof refreshItemFields)[number], unknown>,
+  incoming: RefreshItemInput,
+): boolean {
+  return refreshItemFields.some((field) => !isDeepStrictEqual(stored[field], incoming[field]));
+}
+
+export function findFeedForRefresh(feedId: string) {
+  return getDb().feed.findFirst({
+    where: { id: feedId, deletedAt: null, status: { not: FeedStatus.DELETED } },
+    select: {
+      id: true,
+      workspaceId: true,
+      status: true,
+      sourceType: true,
+      sourceUrl: true,
+      sources: {
+        select: { id: true, url: true },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+      },
+    },
+  });
+}
+
+export async function recordRefreshSuccess(input: {
+  feedId: string;
+  sourceId: string | null;
+  items: RefreshItemInput[];
+  warnings: string[];
+  httpStatus: number;
+  fetchDurationMs: number;
+  etag: string | null;
+  lastModified: string | null;
+}) {
+  return getDb().$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM feeds WHERE id = ${input.feedId}::uuid FOR UPDATE`;
+    const feed = await tx.feed.findFirst({
+      where: {
+        id: input.feedId,
+        deletedAt: null,
+        status: { in: [FeedStatus.ACTIVE, FeedStatus.DEGRADED, FeedStatus.FAILED] },
+      },
+      select: { workspaceId: true },
+    });
+    if (!feed) throw new Error(`Feed ${input.feedId} is no longer refreshable`);
+    const existing = await tx.feedItem.findMany({
+      where: { feedId: input.feedId, fingerprint: { in: input.items.map((item) => item.fingerprint) } },
+      select: {
+        fingerprint: true,
+        sourceItemId: true,
+        canonicalUrl: true,
+        url: true,
+        title: true,
+        descriptionText: true,
+        descriptionHtml: true,
+        author: true,
+        imageUrl: true,
+        datePublished: true,
+        dateModified: true,
+        raw: true,
+      },
+    });
+    const byFingerprint = new Map(existing.map((item) => [item.fingerprint, item]));
+    const newItems = input.items.filter((item) => !byFingerprint.has(item.fingerprint));
+    const changedItems = input.items.filter((item) => {
+      const stored = byFingerprint.get(item.fingerprint);
+      return stored ? refreshItemChanged(stored, item) : false;
+    });
+    const changedFingerprints = new Set(changedItems.map((item) => item.fingerprint));
+    const now = new Date();
+
+    if (newItems.length) {
+      await tx.feedItem.createMany({
+        data: newItems.map((item) => ({
+          ...item,
+          raw: item.raw as Prisma.InputJsonValue,
+          workspaceId: feed.workspaceId,
+          feedId: input.feedId,
+          firstSeenAt: now,
+          lastSeenAt: now,
+        })),
+      });
+    }
+
+    await Promise.all(changedItems.map((item) => tx.feedItem.update({
+      where: { feedId_fingerprint: { feedId: input.feedId, fingerprint: item.fingerprint } },
+      data: { ...item, raw: item.raw as Prisma.InputJsonValue, lastSeenAt: now },
+    })));
+    const unchangedFingerprints = input.items
+      .filter((item) => byFingerprint.has(item.fingerprint) && !changedFingerprints.has(item.fingerprint))
+      .map((item) => item.fingerprint);
+    if (unchangedFingerprints.length) {
+      await tx.feedItem.updateMany({
+        where: { feedId: input.feedId, fingerprint: { in: unchangedFingerprints } },
+        data: { lastSeenAt: now },
+      });
+    }
+
+    await tx.feed.update({
+      where: { id: input.feedId },
+      data: {
+        status: input.warnings.length ? FeedStatus.DEGRADED : FeedStatus.ACTIVE,
+        lastRefreshedAt: now,
+        lastSuccessAt: now,
+        failureCount: 0,
+      },
+    });
+    if (input.sourceId) {
+      await tx.feedSource.update({
+        where: { id: input.sourceId },
+        data: {
+          robotsStatus: "allowed",
+          lastHttpStatus: input.httpStatus,
+          lastFetchDurationMs: Math.round(input.fetchDurationMs),
+          etag: input.etag,
+          lastModified: input.lastModified,
+        },
+      });
+    }
+
+    return {
+      itemsFound: input.items.length,
+      itemsNew: newItems.length,
+      itemsChanged: changedItems.length,
+    };
+  });
+}
+
+export async function recordRefreshFailure(input: {
+  feedId: string;
+  jobId?: string;
+  trigger: string;
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+  source?: {
+    httpStatus: number | null;
+    fetchDurationMs: number | null;
+    etag: string | null;
+    lastModified: string | null;
+  };
+}) {
+  const now = new Date();
+  return getDb().$transaction(async (tx) => {
+    const feed = await tx.feed.findUnique({
+      where: { id: input.feedId },
+      select: { workspaceId: true, status: true, sources: { select: { id: true }, take: 1 } },
+    });
+    if (!feed) return;
+    const refreshable = feed.status === FeedStatus.ACTIVE ||
+      feed.status === FeedStatus.DEGRADED || feed.status === FeedStatus.FAILED;
+    if (refreshable) {
+      await tx.feed.updateMany({
+        where: {
+          id: input.feedId,
+          status: { in: [FeedStatus.ACTIVE, FeedStatus.DEGRADED, FeedStatus.FAILED] },
+        },
+        data: {
+          status: FeedStatus.FAILED,
+          lastRefreshedAt: now,
+          lastFailureAt: now,
+          failureCount: { increment: 1 },
+        },
+      });
+    }
+    if (refreshable && feed.sources[0]) {
+      await tx.feedSource.update({
+        where: { id: feed.sources[0].id },
+        data: input.source
+          ? {
+              lastHttpStatus: input.source.httpStatus,
+              lastFetchDurationMs: input.source.fetchDurationMs,
+              etag: input.source.etag,
+              lastModified: input.source.lastModified,
+            }
+          : { lastHttpStatus: typeof input.details?.status === "number" ? input.details.status : null },
+      });
+    }
+    await tx.errorLog.create({
+      data: {
+        workspaceId: feed.workspaceId,
+        feedId: input.feedId,
+        jobId: input.jobId,
+        severity: ErrorSeverity.ERROR,
+        source: "refresh_worker",
+        code: input.code,
+        message: input.message,
+        details: { trigger: input.trigger, ...(input.details ?? {}) } as Prisma.InputJsonValue,
+      },
+    });
   });
 }

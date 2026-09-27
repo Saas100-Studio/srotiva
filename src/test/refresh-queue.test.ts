@@ -101,9 +101,18 @@ test("database refresh queue lifecycle", async (t) => {
     });
 
     await t.test("completes a running job with result counts", async () => {
+      await assert.rejects(
+        completeRefreshJob({
+          jobId: oldestHigh.id,
+          result: { itemsFound: 5, itemsNew: 3, itemsChanged: 1 },
+          workerId: "different-worker",
+        }),
+        /is not running/,
+      );
       const completed = await completeRefreshJob({
         jobId: oldestHigh.id,
         result: { itemsFound: 5, itemsNew: 3, itemsChanged: 1 },
+        workerId: "queue-test-worker",
       });
 
       assert.equal(completed.status, RefreshJobStatus.SUCCEEDED);
@@ -122,6 +131,7 @@ test("database refresh queue lifecycle", async (t) => {
         jobId: newerHigh.id,
         error: { code: "FETCH_FAILED", message: "Source fetch failed" },
         retryAt,
+        workerId: "queue-test-worker",
       });
 
       assert.equal(failed.status, RefreshJobStatus.FAILED);
