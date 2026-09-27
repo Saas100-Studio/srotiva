@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 05 - Filters and Production Hardening
-- Next ticket (not started): `S05-T01-basic-filter-engine.md`
+- Next ticket (not started): `S05-T02-filter-api.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -70,7 +70,7 @@ Do not write real secrets in this file.
 | S04-T02 Refresh Worker Pipeline | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/refresh-feed.test.ts src/test/refresh-worker.test.ts src/test/refresh-queue.test.ts src/test/public-output-routes.test.ts`; `bun run worker:refresh`; `bun run check` | One-shot background processing now applies robots and SSRF checks before the source and every redirect, refreshes native or webpage feeds, exactly deduplicates and updates items, records source/feed health and failure logs, preserves prior items and outputs on errors, respects paused feeds, and closes jobs under the claiming worker identity. All 141 tests, lint, strict typecheck, and production build pass. |
 | S04-T03 Manual Refresh API and Throttle | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/manual-refresh-api.test.ts src/test/manual-refresh-ui.test.ts src/test/feed-detail-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped editors can atomically enqueue high-priority manual jobs without fetching in the request. A feed-row lock serializes concurrent requests, cooldown responses report seconds remaining, paused feeds are rejected, successful requests are audited, and the detail UI shows queued, throttled, and paused states. No migration or dependency was needed. All 144 tests, lint, strict typecheck, and production build pass. |
 | S04-T04 Scheduler and Feed Health | Done | `main` | `bun run lint`; `bun run typecheck`; `node --env-file-if-exists=.env.local --test src/test/refresh-scheduler.test.ts src/test/feed-health.test.ts src/test/refresh-feed.test.ts src/test/feed-save-api.test.ts src/test/dashboard-shell.test.ts src/test/feed-detail-ui.test.ts`; `node --env-file-if-exists=.env.local --test src/test/refresh-scheduler.test.ts`; `bun run check` | A row-locking scheduler queues due refreshable feeds without duplicating open jobs. New feeds receive an initial schedule, successful runs schedule the configured interval, failures use capped exponential backoff, feed list/detail APIs expose health summaries and timestamps, and dashboard pages show actionable health states. The first full check exposed a concurrent-test assertion that was corrected to scope its verification to the test workspace. No migration or dependency was needed. All 150 tests, lint, strict typecheck, and production build pass. |
-| S05-T01 Basic Filter Engine | Not Started |  |  |  |
+| S05-T01 Basic Filter Engine | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-engine.test.ts src/test/refresh-with-filters.test.ts src/test/refresh-feed.test.ts src/test/public-output-routes.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Deterministic Unicode-normalized keyword rules cover title, description, URL, and author fields. Blacklists win, whitelists require a match, refreshes persist explainable filtered states and reactivate items when rules change, and public outputs remain active-only. Hidden/deleted item states are preserved. No migration or dependency was needed. All 152 tests, lint, strict typecheck, and production build pass. |
 | S05-T02 Filter API | Not Started |  |  |  |
 | S05-T03 Filter UI | Not Started |  |  |  |
 | S05-T04 Rate Limits and Observability | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S05-T01 needs no new environment variables.
+No blockers recorded. S05-T02 needs no new environment variables.
 
 ## Decisions
 
@@ -147,6 +147,7 @@ No blockers recorded. S05-T01 needs no new environment variables.
 - Claim one refresh job atomically with PostgreSQL `FOR UPDATE SKIP LOCKED`, highest priority first and FIFO within a priority. Keep the S04-T01 process entrypoints non-consuming until the pipeline and scheduler tickets provide real work.
 - Process at most one job per refresh-worker invocation. Reuse the hardened fetcher and robots checks for the source and redirects, serialize item/feed/source health changes behind a feed-row lock, and require the claiming worker identity for terminal job transitions.
 - Run the scheduler as a bounded one-shot process. Atomically lock up to 100 due, refreshable feeds with `SKIP LOCKED` and exclude feeds with queued or running jobs. New feeds receive an initial schedule; successful refreshes schedule the configured interval; consecutive failures back off from that interval exponentially up to 24 hours. Treat three consecutive failures as failed health, earlier failures and extraction warnings as degraded health, and overdue feeds without failures as stale.
+- Evaluate enabled per-feed keyword filters inside the feed-locked refresh transaction so persistence uses the latest rules. Normalize item text and keywords with Unicode NFKC, use case-insensitive substring matching, give blacklist matches precedence, require any whitelist match when whitelists exist, and retain filtered items with structured reasons while public outputs continue selecting active items only.
 - Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
 - Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.

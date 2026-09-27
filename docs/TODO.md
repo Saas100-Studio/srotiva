@@ -31,3 +31,6 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Feed health: tune the three-failure threshold and stale messaging from production refresh telemetry rather than adding configuration before real usage exists.
 - Feed health: define a distinct draft health state if a user-facing draft workflow is introduced; current MVP feeds are activated on save.
 - Refresh scheduler: backfill `next_refresh_at` before beta only if the pre-S04 pre-alpha database is promoted instead of starting with a clean production database.
+- Filters: extend filtered-output regression coverage across RSS and CSV in addition to JSON if their shared active-item query is split in the future.
+- Filters: add explicit refresh regressions for preserved hidden/deleted states and malformed legacy filter JSON when historical-data migration becomes relevant.
+- Filters: add workspace-global rules and whole-history re-filtering only when those post-MVP workflows are introduced; MVP evaluates feed rules on items observed during refresh.

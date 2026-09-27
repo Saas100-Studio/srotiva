@@ -1,18 +1,21 @@
 import {
   ErrorSeverity,
+  FeedFilterScope,
+  FeedFilterType,
   FeedItemStatus,
   FeedSourceKind,
   FeedStatus,
   FeedVisibility,
+  Prisma,
   type Feed,
   type FeedItem,
   type FeedSourceType,
-  type Prisma,
 } from "@prisma/client";
 import { isDeepStrictEqual } from "node:util";
 
 import { getDb } from "../client.ts";
 import { nextFailedRefreshAt, nextSuccessfulRefreshAt } from "../../feed/refresh-schedule.ts";
+import { applyFilters } from "../../feed/filter-engine.ts";
 
 const feedProjection = {
   id: true,
@@ -343,14 +346,20 @@ export type RefreshItemInput = {
   raw: Record<string, unknown>;
 };
 
+type PersistedRefreshItem = RefreshItemInput & {
+  status: FeedItemStatus;
+  filterReason: Prisma.JsonValue | null;
+};
+
 const refreshItemFields = [
   "sourceItemId", "canonicalUrl", "url", "title", "descriptionText",
   "descriptionHtml", "author", "imageUrl", "datePublished", "dateModified", "raw",
+  "status", "filterReason",
 ] as const;
 
 function refreshItemChanged(
   stored: Record<(typeof refreshItemFields)[number], unknown>,
-  incoming: RefreshItemInput,
+  incoming: PersistedRefreshItem,
 ): boolean {
   return refreshItemFields.some((field) => !isDeepStrictEqual(stored[field], incoming[field]));
 }
@@ -394,8 +403,27 @@ export async function recordRefreshSuccess(input: {
       select: { workspaceId: true, refreshIntervalMinutes: true },
     });
     if (!feed) throw new Error(`Feed ${input.feedId} is no longer refreshable`);
+    const filters = await tx.feedFilter.findMany({
+      where: {
+        workspaceId: feed.workspaceId,
+        feedId: input.feedId,
+        scope: FeedFilterScope.FEED,
+        isEnabled: true,
+        type: { in: [FeedFilterType.WHITELIST, FeedFilterType.BLACKLIST] },
+      },
+      select: { id: true, type: true, field: true, value: true, isEnabled: true },
+      orderBy: [{ orderIndex: "asc" }, { id: "asc" }],
+    });
+    const evaluatedItems = input.items.map((item): PersistedRefreshItem => {
+      const result = applyFilters({ item, filters });
+      return {
+        ...item,
+        status: result.included ? FeedItemStatus.ACTIVE : FeedItemStatus.FILTERED,
+        filterReason: result.reason,
+      };
+    });
     const existing = await tx.feedItem.findMany({
-      where: { feedId: input.feedId, fingerprint: { in: input.items.map((item) => item.fingerprint) } },
+      where: { feedId: input.feedId, fingerprint: { in: evaluatedItems.map((item) => item.fingerprint) } },
       select: {
         fingerprint: true,
         sourceItemId: true,
@@ -409,11 +437,19 @@ export async function recordRefreshSuccess(input: {
         datePublished: true,
         dateModified: true,
         raw: true,
+        status: true,
+        filterReason: true,
       },
     });
     const byFingerprint = new Map(existing.map((item) => [item.fingerprint, item]));
-    const newItems = input.items.filter((item) => !byFingerprint.has(item.fingerprint));
-    const changedItems = input.items.filter((item) => {
+    const items = evaluatedItems.map((item) => {
+      const stored = byFingerprint.get(item.fingerprint);
+      return stored?.status === FeedItemStatus.HIDDEN || stored?.status === FeedItemStatus.DELETED
+        ? { ...item, status: stored.status, filterReason: stored.filterReason }
+        : item;
+    });
+    const newItems = items.filter((item) => !byFingerprint.has(item.fingerprint));
+    const changedItems = items.filter((item) => {
       const stored = byFingerprint.get(item.fingerprint);
       return stored ? refreshItemChanged(stored, item) : false;
     });
@@ -425,6 +461,7 @@ export async function recordRefreshSuccess(input: {
         data: newItems.map((item) => ({
           ...item,
           raw: item.raw as Prisma.InputJsonValue,
+          filterReason: item.filterReason === null ? Prisma.DbNull : item.filterReason,
           workspaceId: feed.workspaceId,
           feedId: input.feedId,
           firstSeenAt: now,
@@ -435,9 +472,14 @@ export async function recordRefreshSuccess(input: {
 
     await Promise.all(changedItems.map((item) => tx.feedItem.update({
       where: { feedId_fingerprint: { feedId: input.feedId, fingerprint: item.fingerprint } },
-      data: { ...item, raw: item.raw as Prisma.InputJsonValue, lastSeenAt: now },
+      data: {
+        ...item,
+        raw: item.raw as Prisma.InputJsonValue,
+        filterReason: item.filterReason === null ? Prisma.DbNull : item.filterReason,
+        lastSeenAt: now,
+      },
     })));
-    const unchangedFingerprints = input.items
+    const unchangedFingerprints = items
       .filter((item) => byFingerprint.has(item.fingerprint) && !changedFingerprints.has(item.fingerprint))
       .map((item) => item.fingerprint);
     if (unchangedFingerprints.length) {
@@ -471,7 +513,7 @@ export async function recordRefreshSuccess(input: {
     }
 
     return {
-      itemsFound: input.items.length,
+      itemsFound: items.length,
       itemsNew: newItems.length,
       itemsChanged: changedItems.length,
     };
