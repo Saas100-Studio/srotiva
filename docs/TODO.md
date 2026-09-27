@@ -19,3 +19,5 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Dashboard: keep account identity visible in the compact mobile shell when the final navigation pattern is designed.
 - Feed creation UI: add browser-level discovery and save-flow coverage when the project adopts an end-to-end test harness.
 - Feed creation UI: move focus to loading, error, and preview regions if usability testing shows keyboard users miss state changes.
+- Feed detail UI: add browser-level coverage for clipboard, pause/resume, and confirmed deletion when the project adopts an end-to-end test harness.
+- Public outputs: before supporting `SESSION_SECRET` rotation, resynchronize private-token hashes on authenticated detail access or introduce a dedicated stable output-token secret.

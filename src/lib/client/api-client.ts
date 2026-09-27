@@ -45,14 +45,10 @@ export function feedCreationErrorMessage(error: unknown): string {
   return error.message;
 }
 
-async function post<T>(url: string, body: unknown, fetcher: typeof fetch): Promise<T> {
+async function request<T>(url: string, init: RequestInit, fetcher: typeof fetch): Promise<T> {
   let response: Response;
   try {
-    response = await fetcher(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    response = await fetcher(url, init);
   } catch {
     throw new ClientApiError("NETWORK_ERROR", "Unable to reach Morsel. Please try again.");
   }
@@ -65,6 +61,29 @@ async function post<T>(url: string, body: unknown, fetcher: typeof fetch): Promi
     );
   }
   return result.data;
+}
+
+function post<T>(url: string, body: unknown, fetcher: typeof fetch): Promise<T> {
+  return request(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  }, fetcher);
+}
+
+async function mutate<T>(
+  url: string,
+  method: "PATCH" | "DELETE",
+  body: unknown,
+  fetcher: typeof fetch,
+): Promise<T> {
+  return request(url, {
+    method,
+    ...(body === undefined ? {} : {
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  }, fetcher);
 }
 
 export function discoverFeed(
@@ -82,4 +101,31 @@ export function saveFeedPreview(
   fetcher: typeof fetch = fetch,
 ): Promise<{ id: string }> {
   return post("/api/feeds", { ...preview, workspaceId, feedTitle }, fetcher);
+}
+
+export function updateFeedStatus(
+  workspaceId: string,
+  feedId: string,
+  status: "ACTIVE" | "PAUSED",
+  fetcher: typeof fetch = fetch,
+): Promise<{ status: "ACTIVE" | "PAUSED" }> {
+  return mutate(
+    `/api/feeds/${encodeURIComponent(feedId)}?workspaceId=${encodeURIComponent(workspaceId)}`,
+    "PATCH",
+    { status },
+    fetcher,
+  );
+}
+
+export function deleteFeed(
+  workspaceId: string,
+  feedId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ deleted: true; id: string }> {
+  return mutate(
+    `/api/feeds/${encodeURIComponent(feedId)}?workspaceId=${encodeURIComponent(workspaceId)}`,
+    "DELETE",
+    undefined,
+    fetcher,
+  );
 }

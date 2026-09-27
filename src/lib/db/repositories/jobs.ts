@@ -28,3 +28,21 @@ export function createRefreshJob({
     },
   });
 }
+
+export function listRecentRefreshJobs(workspaceId: string, feedId: string, limit = 5) {
+  return getDb().feedRefreshJob.findMany({
+    where: { workspaceId, feedId },
+    select: {
+      id: true,
+      status: true,
+      trigger: true,
+      itemsFound: true,
+      itemsNew: true,
+      errorMessage: true,
+      createdAt: true,
+      finishedAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit,
+  });
+}

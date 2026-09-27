@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
+import { FeedStatusBadge } from "../../components/feed-status-badge.tsx";
 import { getOptionalCurrentUserFromCookieHeader } from "../../lib/auth/current-user.ts";
 import { requireDashboardUser } from "../../lib/auth/dashboard.ts";
 import { listFeeds } from "../../lib/db/repositories/feeds.ts";
@@ -38,10 +39,10 @@ export function DashboardIndex({
             {feeds.slice(0, 5).map((feed) => (
               <li key={feed.id}>
                 <div>
-                  <strong>{feed.name}</strong>
+                  <strong><Link href={`/dashboard/feeds/${feed.id}`}>{feed.name}</Link></strong>
                   <span>{feed.sourceUrl}</span>
                 </div>
-                <span className="status-badge">{feed.status.toLowerCase()}</span>
+                <FeedStatusBadge status={feed.status} />
               </li>
             ))}
           </ul>

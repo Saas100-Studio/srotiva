@@ -28,6 +28,7 @@ const feedProjection = {
   refreshIntervalMinutes: true,
   lastRefreshedAt: true,
   nextRefreshAt: true,
+  failureCount: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.FeedSelect;

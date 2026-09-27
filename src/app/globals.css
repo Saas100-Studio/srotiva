@@ -234,6 +234,8 @@ h1, h2, p { margin-top: 0; }
 .feed-list li div { min-width: 0; display: grid; gap: 5px; }
 .feed-list li div span { overflow: hidden; color: var(--muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .status-badge { align-self: start; padding: 4px 8px; border-radius: 999px; background: var(--surface-soft); font-size: 12px; text-transform: capitalize; }
+.status-badge--active { background: #e4f5e9; color: #17652e; }
+.status-badge--paused { background: #fff0cf; color: #744800; }
 
 .feed-create-page { width: min(100%, 820px); margin: 0 auto; }
 .feed-create { display: grid; gap: 24px; }
@@ -267,6 +269,43 @@ h1, h2, p { margin-top: 0; }
 .feed-save > input { grid-column: 1; }
 .feed-save > button { grid-column: 2; grid-row: 3; }
 
+.feed-detail-page { display: grid; gap: 24px; width: min(100%, 1040px); margin: 0 auto; }
+.feed-detail-page > .page-heading { margin-bottom: 4px; }
+.feed-detail-title { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.feed-detail-title h1 { margin-bottom: 8px; overflow-wrap: anywhere; }
+.feed-detail-title .status-badge { margin-bottom: 8px; }
+.source-link { color: var(--accent-dark); overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.feed-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.feed-detail-card { min-width: 0; padding: 28px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.feed-detail-card > h2 { margin-bottom: 18px; }
+.feed-detail-card > h2 + p { margin-top: -10px; color: var(--muted); }
+.feed-facts { display: grid; gap: 0; margin: 0; }
+.feed-facts div { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.feed-facts dt { color: var(--muted); }
+.feed-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.feed-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.button--danger { border-color: #8c1d18; background: #8c1d18; }
+.button--danger:hover { background: #681410; }
+.feed-detail-card .form-error { margin-top: 18px; }
+.muted-copy { margin-bottom: 0; color: var(--muted); line-height: 1.5; }
+.output-links { display: grid; gap: 14px; }
+.output-link { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.output-link label { color: var(--muted); font-size: 13px; font-weight: 750; }
+.output-link input { min-width: 0; min-height: 42px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface-soft); }
+.copy-status { min-height: 21px; margin: 14px 0 0 !important; font-size: 14px; }
+.feed-item-table-wrap { overflow-x: auto; }
+.feed-item-table { width: 100%; border-collapse: collapse; text-align: left; }
+.feed-item-table th,
+.feed-item-table td { padding: 13px 12px; border-top: 1px solid var(--rule); vertical-align: top; }
+.feed-item-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+.feed-item-table td:first-child { min-width: 240px; font-weight: 700; overflow-wrap: anywhere; }
+.feed-item-table td:nth-child(2) { white-space: nowrap; }
+.feed-item-table a { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 3px; }
+.feed-items-empty { min-height: 220px; }
+.refresh-history { margin: 0; padding: 0; list-style: none; }
+.refresh-history li { display: grid; gap: 5px; padding: 14px 0; border-top: 1px solid var(--rule); }
+.refresh-history li span:not(:first-child) { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+
 @media (max-width: 720px) {
   .landing-header { padding: 0 16px; }
   .landing-copy { font-size: 17px; }
@@ -291,6 +330,10 @@ h1, h2, p { margin-top: 0; }
   .feed-preview,
   .feed-save { padding: 22px; }
   .feed-preview__heading { display: grid; }
+  .feed-detail-grid { grid-template-columns: 1fr; }
+  .feed-detail-card { padding: 22px; }
+  .output-link { grid-template-columns: 1fr auto; }
+  .output-link label { grid-column: 1 / -1; }
 }
 
 @media (max-width: 460px) {
