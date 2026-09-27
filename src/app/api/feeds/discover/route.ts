@@ -1,10 +1,14 @@
 import { MorselApiError } from "../../../../lib/api/errors.ts";
 import { createRequestContext } from "../../../../lib/api/request-context.ts";
-import { jsonError, jsonOk } from "../../../../lib/api/responses.ts";
+import { createRequestId, jsonError, jsonOk } from "../../../../lib/api/responses.ts";
 import { discoverFeedPreview } from "../../../../lib/feed/feed-discovery-service.ts";
+import { writeErrorLog } from "../../../../lib/logging/error-log.ts";
+import { logError } from "../../../../lib/logging/logger.ts";
+import { enforceRateLimit } from "../../../../lib/security/rate-limit.ts";
 
 type DiscoverRouteDependencies = {
   discoverFeedPreview?: typeof discoverFeedPreview;
+  writeErrorLog?: typeof writeErrorLog;
 };
 
 function routeError(error: unknown): unknown {
@@ -22,6 +26,9 @@ export async function handleDiscoverPost(
   request: Request,
   dependencies: DiscoverRouteDependencies = {},
 ): Promise<Response> {
+  const requestId = createRequestId();
+  let workspaceId: string | undefined;
+  let discoveryStarted = false;
   try {
     const context = await createRequestContext(request);
     const value: unknown = await request.json().catch(() => {
@@ -40,9 +47,36 @@ export async function handleDiscoverPost(
     if (body.workspaceId !== context.workspace.id) {
       throw new MorselApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
     }
-    return jsonOk(await (dependencies.discoverFeedPreview ?? discoverFeedPreview)({ url: body.url }));
+    workspaceId = context.workspace.id;
+    enforceRateLimit({
+      bucket: "feed_discovery",
+      key: `${context.user.id}:${workspaceId}`,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    discoveryStarted = true;
+    return jsonOk(await (dependencies.discoverFeedPreview ?? discoverFeedPreview)({ url: body.url }), { requestId });
   } catch (error) {
-    return jsonError(routeError(error));
+    const responseError = routeError(error);
+    if (discoveryStarted && workspaceId) {
+      const apiError = responseError instanceof MorselApiError
+        ? responseError
+        : new MorselApiError(500, "INTERNAL_ERROR", "An unexpected error occurred.");
+      await (dependencies.writeErrorLog ?? writeErrorLog)({
+        workspaceId,
+        source: "feed_discovery",
+        code: apiError.code,
+        message: apiError.message,
+        details: { requestId },
+      }).catch((logFailure) => logError(logFailure, {
+        event: "database_error_log_failed",
+        requestId,
+        route: "/api/feeds/discover",
+        workspaceId,
+      }));
+    }
+    logError(responseError, { event: "request_failed", requestId, route: "/api/feeds/discover", workspaceId });
+    return jsonError(responseError, { requestId });
   }
 }
 

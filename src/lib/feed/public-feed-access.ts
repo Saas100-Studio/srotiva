@@ -1,8 +1,11 @@
 import { FeedVisibility, type Prisma } from "@prisma/client";
 import { timingSafeEqual } from "node:crypto";
 
+import { createRequestId, jsonError } from "../api/responses.ts";
 import { loadEnv } from "../config/env.ts";
 import { findActiveFeedByOutputSlug, listActiveOutputItems } from "../db/repositories/feeds.ts";
+import { logError } from "../logging/logger.ts";
+import { clientIp, enforceRateLimit } from "../security/rate-limit.ts";
 import { hashPrivateFeedToken } from "./feed-output-token.ts";
 import { getRenderCacheControl } from "./render-cache.ts";
 import { renderCsvFeed } from "./render-csv.ts";
@@ -36,25 +39,47 @@ async function findPublicFeed(outputSlug: string, token: string | null) {
   };
 }
 
-function notFound(): Response {
+function notFound(requestId: string): Response {
   return new Response("Not Found", {
     status: 404,
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": getRenderCacheControl("private") },
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": getRenderCacheControl("private"),
+      "x-request-id": requestId,
+    },
   });
 }
 
 export async function renderPublicFeed(request: Request, outputSlug: string, format: OutputFormat): Promise<Response> {
-  const result = await findPublicFeed(outputSlug, new URL(request.url).searchParams.get("token"));
-  if (!result) return notFound();
-  const body = format === "rss"
-    ? renderRssFeed({ feed: result.feed, items: result.items, selfUrl: `${result.selfBaseUrl}/rss` })
-    : format === "json"
-      ? renderJsonFeed({ feed: result.feed, items: result.items })
-      : renderCsvFeed({ items: result.items });
-  const contentType = format === "rss"
-    ? "application/rss+xml; charset=utf-8"
-    : format === "json"
-      ? "application/json; charset=utf-8"
-      : "text/csv; charset=utf-8";
-  return new Response(body, { headers: { "content-type": contentType, "cache-control": getRenderCacheControl(result.access) } });
+  const requestId = createRequestId();
+  try {
+    enforceRateLimit({
+      bucket: "public_output",
+      key: `${clientIp(request)}:${outputSlug}`,
+      limit: 60,
+      windowMs: 60_000,
+    });
+    const result = await findPublicFeed(outputSlug, new URL(request.url).searchParams.get("token"));
+    if (!result) return notFound(requestId);
+    const body = format === "rss"
+      ? renderRssFeed({ feed: result.feed, items: result.items, selfUrl: `${result.selfBaseUrl}/rss` })
+      : format === "json"
+        ? renderJsonFeed({ feed: result.feed, items: result.items })
+        : renderCsvFeed({ items: result.items });
+    const contentType = format === "rss"
+      ? "application/rss+xml; charset=utf-8"
+      : format === "json"
+        ? "application/json; charset=utf-8"
+        : "text/csv; charset=utf-8";
+    return new Response(body, {
+      headers: {
+        "content-type": contentType,
+        "cache-control": getRenderCacheControl(result.access),
+        "x-request-id": requestId,
+      },
+    });
+  } catch (error) {
+    logError(error, { event: "request_failed", requestId, route: `/f/[slug]/${format}` });
+    return jsonError(error, { requestId, headers: { "cache-control": getRenderCacheControl("private") } });
+  }
 }

@@ -38,3 +38,10 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Filter API: authenticate before parsing mutation bodies if unauthenticated callers must always receive authorization errors instead of body-validation errors.
 - Filter API: explicitly reject or map future `FeedFilterType` values in API projections before advanced rule types are exposed through the per-feed endpoints.
 - Filter UI: add browser-level create, preview, toggle, delete, and viewer-role coverage when the project adopts an end-to-end test harness.
+- Rate limits: replace process-local fixed-window buckets with a shared Redis-backed limiter before running multiple web instances.
+- Rate limits: configure the production proxy as the only trusted source of forwarded client IP headers, or use the hosting platform's verified client-IP API for direct deployments.
+- Observability: ship structured JSON logs to a durable sink with retention and alerting when the deployment platform is selected.
+- Support diagnostics: add a global support-admin identity only if operations must diagnose workspaces without an explicit `SUPPORT` membership.
+- Rate limits: add explicit signup and manual-refresh saturation route tests if those limits diverge from the shared limiter behavior.
+- Support diagnostics: add cross-workspace support and empty job/error-history coverage if the diagnostics response grows beyond its current tenant-scoped query.
+- Observability: add an end-to-end assertion correlating one request ID across response, structured log, and database error log when log capture is standardized.

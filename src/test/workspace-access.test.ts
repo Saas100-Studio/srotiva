@@ -49,7 +49,11 @@ test("workspace role authorization enforces tenant boundaries", async (t) => {
       email: `access-outsider-${suffix}@morsel.test`,
       passwordHash: "test-password-hash",
     });
-    userIds.push(owner.id, editor.id, viewer.id, outsider.id);
+    const invitee = await createUser({
+      email: `access-invitee-${suffix}@morsel.test`,
+      passwordHash: "test-password-hash",
+    });
+    userIds.push(owner.id, editor.id, viewer.id, outsider.id, invitee.id);
 
     const workspace = await createWorkspaceWithOwner({
       userId: owner.id,
@@ -76,6 +80,12 @@ test("workspace role authorization enforces tenant boundaries", async (t) => {
           userId: viewer.id,
           role: WorkspaceRole.VIEWER,
           joinedAt: new Date(),
+        },
+        {
+          workspaceId: workspace.id,
+          userId: invitee.id,
+          role: WorkspaceRole.OWNER,
+          joinedAt: null,
         },
       ],
     });
@@ -145,6 +155,20 @@ test("workspace role authorization enforces tenant boundaries", async (t) => {
           workspaceId: workspace.id,
           roles: [WorkspaceRole.EDITOR],
         }),
+      );
+    });
+
+    await t.test("a pending invitation grants neither a session workspace nor role access", async () => {
+      await assertAccessDenied(requireWorkspaceRole({
+        userId: invitee.id,
+        workspaceId: workspace.id,
+        roles: [WorkspaceRole.VIEWER],
+      }));
+      await assert.rejects(
+        requireUser(new Request("http://localhost:3000/api/example", {
+          headers: { cookie: createSessionCookie(invitee.id, { secure: false }) },
+        })),
+        { code: "UNAUTHENTICATED" },
       );
     });
 

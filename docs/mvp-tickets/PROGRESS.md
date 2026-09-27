@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 05 - Filters and Production Hardening
-- Next ticket (not started): `S05-T04-rate-limits-and-observability.md`
+- Next ticket (not started): `S05-T05-production-readiness-gate.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -73,7 +73,7 @@ Do not write real secrets in this file.
 | S05-T01 Basic Filter Engine | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-engine.test.ts src/test/refresh-with-filters.test.ts src/test/refresh-feed.test.ts src/test/public-output-routes.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Deterministic Unicode-normalized keyword rules cover title, description, URL, and author fields. Blacklists win, whitelists require a match, refreshes persist explainable filtered states and reactivate items when rules change, and public outputs remain active-only. Hidden/deleted item states are preserved. No migration or dependency was needed. All 152 tests, lint, strict typecheck, and production build pass. |
 | S05-T02 Filter API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-api.test.ts src/test/filter-preview-api.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped viewer listing and editor CRUD now validate and store basic per-feed keyword rules. Preview combines saved enabled rules with an unsaved candidate, scans existing active/filtered items in stable UUID cursor batches for exact counts, returns bounded samples with reasons, and does not mutate items or filters. No migration or dependency was needed. All 154 tests, lint, strict typecheck, and production build pass. |
 | S05-T03 Filter UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Feed detail now loads and displays saved keyword rules for every workspace member. Editors can validate and create whitelist/blacklist rules, preview exact included/excluded counts with bounded samples and reasons, enable/disable rules, and confirm deletion; viewers remain read-only. Pending, empty, validation, and request-ID error states are covered. No migration or dependency was needed. All 157 tests, lint, strict typecheck, and production build pass. |
-| S05-T04 Rate Limits and Observability | Not Started |  |  |  |
+| S05-T04 Rate Limits and Observability | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/rate-limit.test.ts src/test/workspace-access.test.ts src/test/feed-diagnostics-api.test.ts src/test/auth-routes.test.ts src/test/feed-discover-api.test.ts src/test/manual-refresh-api.test.ts src/test/public-output-routes.test.ts`; `bun run typecheck`; `bun run lint`; `bun run check` | Bounded process-local fixed-window limits protect signup, login, discovery, manual refresh, and shared RSS/JSON/CSV output rendering with `RATE_LIMITED` and `Retry-After`; saturated storage purges expired buckets and otherwise fails closed without evicting live limits. Highest-risk route failures emit token-free structured JSON with request IDs and error codes, discovery failures persist safe database records, existing refresh failure records remain single-written, and joined `SUPPORT` workspace members can inspect tenant-scoped token-free feed diagnostics. Pending invitations are excluded from both authorization and current-user workspace selection. The existing support role avoided a schema migration. All 167 tests, lint, strict typecheck, and production build pass. |
 | S05-T05 MVP Production Readiness Gate | Not Started |  |  |  |
 
 ## Sprint Release Notes Draft
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S05-T04 needs no new environment variables.
+No blockers recorded. S05-T05 needs no new environment variables.
 
 ## Decisions
 
@@ -148,6 +148,7 @@ No blockers recorded. S05-T04 needs no new environment variables.
 - Process at most one job per refresh-worker invocation. Reuse the hardened fetcher and robots checks for the source and redirects, serialize item/feed/source health changes behind a feed-row lock, and require the claiming worker identity for terminal job transitions.
 - Run the scheduler as a bounded one-shot process. Atomically lock up to 100 due, refreshable feeds with `SKIP LOCKED` and exclude feeds with queued or running jobs. New feeds receive an initial schedule; successful refreshes schedule the configured interval; consecutive failures back off from that interval exponentially up to 24 hours. Treat three consecutive failures as failed health, earlier failures and extraction warnings as degraded health, and overdue feeds without failures as stale.
 - Evaluate enabled per-feed keyword filters inside the feed-locked refresh transaction so persistence uses the latest rules. Normalize item text and keywords with Unicode NFKC, use case-insensitive substring matching, give blacklist matches precedence, require any whitelist match when whitelists exist, and retain filtered items with structured reasons while public outputs continue selecting active items only.
+- Keep MVP rate limits as bounded process-local fixed windows and use the existing exact `SUPPORT` workspace role for tenant-scoped diagnostics. Trust forwarded client-IP headers only behind the deployment proxy; move buckets to Redis before multi-instance scale.
 - Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
 - Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.

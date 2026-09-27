@@ -1,4 +1,4 @@
-import { jsonError, jsonOk } from "../../../../lib/api/responses.ts";
+import { createRequestId, jsonError, jsonOk } from "../../../../lib/api/responses.ts";
 import {
   login,
   parseAuthInput,
@@ -6,11 +6,20 @@ import {
 } from "../../../../lib/auth/account.ts";
 import { createSessionCookie } from "../../../../lib/auth/session.ts";
 import { writeAuditLog } from "../../../../lib/audit/audit-log.ts";
+import { logError } from "../../../../lib/logging/logger.ts";
+import { clientIp, enforceRateLimit } from "../../../../lib/security/rate-limit.ts";
 
-export async function POST(request: Request): Promise<Response> {
+export async function handleLoginPost(request: Request): Promise<Response> {
+  const requestId = createRequestId();
   try {
     const input = parseAuthInput(await readJsonBody(request), {
       requireName: false,
+    });
+    enforceRateLimit({
+      bucket: "login",
+      key: `${clientIp(request)}:${input.email}`,
+      limit: 5,
+      windowMs: 15 * 60_000,
     });
     const currentUser = await login(input);
     await writeAuditLog({
@@ -23,9 +32,15 @@ export async function POST(request: Request): Promise<Response> {
     });
 
     return jsonOk(currentUser, {
+      requestId,
       headers: { "set-cookie": createSessionCookie(currentUser.user.id) },
     });
   } catch (error) {
-    return jsonError(error);
+    logError(error, { event: "request_failed", requestId, route: "/api/auth/login" });
+    return jsonError(error, { requestId });
   }
+}
+
+export function POST(request: Request): Promise<Response> {
+  return handleLoginPost(request);
 }

@@ -2,9 +2,11 @@ import { WorkspaceRole } from "@prisma/client";
 
 import { MorselApiError } from "../../../../../lib/api/errors.ts";
 import { createRequestContext } from "../../../../../lib/api/request-context.ts";
-import { jsonError, jsonOk } from "../../../../../lib/api/responses.ts";
+import { createRequestId, jsonError, jsonOk } from "../../../../../lib/api/responses.ts";
 import { requireWorkspaceRole } from "../../../../../lib/auth/workspace-access.ts";
 import { requestManualRefresh } from "../../../../../lib/feed/manual-refresh-service.ts";
+import { logError } from "../../../../../lib/logging/logger.ts";
+import { enforceRateLimit } from "../../../../../lib/security/rate-limit.ts";
 
 function routeError(error: unknown): unknown {
   if (!(error instanceof MorselApiError)) return error;
@@ -14,6 +16,8 @@ function routeError(error: unknown): unknown {
 }
 
 export async function handleManualRefresh(request: Request, feedId: string): Promise<Response> {
+  const requestId = createRequestId();
+  let workspaceId: string | undefined;
   try {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(feedId)) {
       throw new MorselApiError(422, "VALIDATION_ERROR", "feedId must be a UUID.");
@@ -21,12 +25,13 @@ export async function handleManualRefresh(request: Request, feedId: string): Pro
     const value: unknown = await request.json().catch(() => {
       throw new MorselApiError(422, "VALIDATION_ERROR", "The request body must be valid JSON.");
     });
-    const workspaceId = value && typeof value === "object" && !Array.isArray(value)
+    const requestedWorkspaceId = value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>).workspaceId
       : undefined;
-    if (typeof workspaceId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceId)) {
+    if (typeof requestedWorkspaceId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedWorkspaceId)) {
       throw new MorselApiError(422, "VALIDATION_ERROR", "workspaceId must be a UUID.");
     }
+    workspaceId = requestedWorkspaceId;
 
     const context = await createRequestContext(request);
     if (workspaceId !== context.workspace.id) {
@@ -37,14 +42,22 @@ export async function handleManualRefresh(request: Request, feedId: string): Pro
       workspaceId,
       roles: [WorkspaceRole.EDITOR],
     });
+    enforceRateLimit({
+      bucket: "manual_refresh",
+      key: `${workspaceId}:${feedId}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
 
     return jsonOk(await requestManualRefresh({
       workspaceId,
       feedId,
       actorUserId: context.user.id,
-    }), { status: 202 });
+    }), { status: 202, requestId });
   } catch (error) {
-    return jsonError(routeError(error));
+    const responseError = routeError(error);
+    logError(responseError, { event: "request_failed", requestId, route: "/api/feeds/[feedId]/refresh", feedId, workspaceId });
+    return jsonError(responseError, { requestId });
   }
 }
 

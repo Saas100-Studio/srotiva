@@ -42,6 +42,7 @@ export function findActiveWorkspaceMembership({
     where: {
       userId,
       workspaceId,
+      joinedAt: { not: null },
       workspace: { status: "ACTIVE" },
     },
     select: {

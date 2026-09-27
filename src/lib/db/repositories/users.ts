@@ -30,7 +30,7 @@ export function findUserWithActiveWorkspaceMembershipsById(userId: string) {
       email: true,
       name: true,
       memberships: {
-        where: { workspace: { status: "ACTIVE" } },
+        where: { joinedAt: { not: null }, workspace: { status: "ACTIVE" } },
         orderBy: { createdAt: "asc" },
         select: {
           role: true,

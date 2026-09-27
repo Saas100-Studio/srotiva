@@ -51,7 +51,16 @@ export function jsonError(
           "An unexpected error occurred.",
         );
   const response = responseInit(
-    { ...init, status: apiError.status },
+    {
+      ...init,
+      status: apiError.status,
+      headers: apiError.code === "RATE_LIMITED"
+        ? new Headers({
+            ...Object.fromEntries(new Headers(init.headers)),
+            "retry-after": String(apiError.details.retryAfterSeconds ?? 1),
+          })
+        : init.headers,
+    },
     apiError.status,
   );
 
