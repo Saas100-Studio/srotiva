@@ -6,6 +6,7 @@ import { FeedItemTable } from "../../../../components/feed-item-table.tsx";
 import { FeedOutputLinks } from "../../../../components/feed-output-links.tsx";
 import { FeedSettingsPanel } from "../../../../components/feed-settings-panel.tsx";
 import { FeedStatusBadge } from "../../../../components/feed-status-badge.tsx";
+import { ManualRefreshButton } from "../../../../components/manual-refresh-button.tsx";
 import { getOptionalCurrentUserFromCookieHeader } from "../../../../lib/auth/current-user.ts";
 import { requireDashboardUser } from "../../../../lib/auth/dashboard.ts";
 import { loadEnv } from "../../../../lib/config/env.ts";
@@ -75,6 +76,12 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
         json: `${outputBase}/json${suffix}`,
         csv: `${outputBase}/csv${suffix}`,
       }} />
+      {canManage ? (
+        <section className="feed-detail-card" aria-labelledby="manual-refresh-heading">
+          <h2 id="manual-refresh-heading">Manual refresh</h2>
+          <ManualRefreshButton workspaceId={workspaceId} feedId={feed.id} paused={feed.status === "PAUSED"} />
+        </section>
+      ) : null}
       <FeedItemTable items={itemsResult?.items ?? []} />
 
       <section className="feed-detail-card" aria-labelledby="refresh-history-heading">

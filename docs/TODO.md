@@ -26,3 +26,4 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Refresh queue: make terminal transitions retry-idempotent if production processing can redeliver completion or failure writes; worker ownership is now enforced by the real worker.
 - Refresh pipeline: send conditional `If-None-Match`/`If-Modified-Since` requests and handle `304` once the shared fetcher accepts safe caller headers.
 - Refresh pipeline: persist `robotsStatus=disallowed` on robots denials and suppress noisy error logs for stale jobs that encounter an already paused or deleted feed.
+- Manual refresh: add a live cooldown countdown and browser-level click coverage if static retry feedback proves unclear in usability testing.

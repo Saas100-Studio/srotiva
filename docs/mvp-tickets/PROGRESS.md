@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 04 - Refresh Jobs
-- Next ticket (not started): `S04-T03-manual-refresh-api-and-throttle.md`
+- Next ticket (not started): `S04-T04-scheduler-and-feed-health.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -68,7 +68,7 @@ Do not write real secrets in this file.
 | S03-T04 Help, Empty States, and Error States | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/help-and-states.test.ts src/test/feed-create-ui.test.ts src/test/feed-detail-ui.test.ts src/test/dashboard-shell.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Static MVP help covers feed creation, native feeds versus webpage extraction, output formats, and common failures. Reusable accessible empty, error, and loading states now guide dashboard, creation, and detail flows; API errors retain request IDs and link to troubleshooting. All 127 tests, lint, strict typecheck, and production build pass. |
 | S04-T01 Refresh Queue and Worker Shell | Done | `main` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `node --env-file-if-exists=.env.local --test src/test/refresh-queue.test.ts`; `bun run worker:refresh`; `bun run scheduler`; `bun run lint`; `bun run typecheck`; `bun run check` | PostgreSQL-backed enqueue, atomic priority/FIFO claim with `FOR UPDATE SKIP LOCKED`, result/error transitions, lock and retry fields, and harmless worker/scheduler placeholders are complete. Database and Prisma schema have no drift. All 131 tests, lint, strict typecheck, and production build pass. |
 | S04-T02 Refresh Worker Pipeline | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/refresh-feed.test.ts src/test/refresh-worker.test.ts src/test/refresh-queue.test.ts src/test/public-output-routes.test.ts`; `bun run worker:refresh`; `bun run check` | One-shot background processing now applies robots and SSRF checks before the source and every redirect, refreshes native or webpage feeds, exactly deduplicates and updates items, records source/feed health and failure logs, preserves prior items and outputs on errors, respects paused feeds, and closes jobs under the claiming worker identity. All 141 tests, lint, strict typecheck, and production build pass. |
-| S04-T03 Manual Refresh API and Throttle | Not Started |  |  |  |
+| S04-T03 Manual Refresh API and Throttle | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/manual-refresh-api.test.ts src/test/manual-refresh-ui.test.ts src/test/feed-detail-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped editors can atomically enqueue high-priority manual jobs without fetching in the request. A feed-row lock serializes concurrent requests, cooldown responses report seconds remaining, paused feeds are rejected, successful requests are audited, and the detail UI shows queued, throttled, and paused states. No migration or dependency was needed. All 144 tests, lint, strict typecheck, and production build pass. |
 | S04-T04 Scheduler and Feed Health | Not Started |  |  |  |
 | S05-T01 Basic Filter Engine | Not Started |  |  |  |
 | S05-T02 Filter API | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S04-T03 needs no new environment variables; `MANUAL_REFRESH_COOLDOWN_SECONDS` is already documented.
+No blockers recorded. S04-T04 needs no new environment variables.
 
 ## Decisions
 

@@ -25,19 +25,21 @@ export type FeedPreview = {
 
 type ApiEnvelope<T> = {
   data?: T;
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: Record<string, unknown> };
   requestId?: string;
 };
 
 export class ClientApiError extends Error {
   readonly code: string;
   readonly requestId?: string;
+  readonly details: Record<string, unknown>;
 
-  constructor(code: string, message: string, requestId?: string) {
+  constructor(code: string, message: string, requestId?: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "ClientApiError";
     this.code = code;
     this.requestId = requestId;
+    this.details = details;
   }
 }
 
@@ -62,6 +64,7 @@ async function request<T>(url: string, init: RequestInit, fetcher: typeof fetch)
       result.error?.code ?? "REQUEST_FAILED",
       result.error?.message ?? "Unable to complete the request.",
       result.requestId ?? response.headers.get("x-request-id") ?? undefined,
+      result.error?.details,
     );
   }
   return result.data;
@@ -132,4 +135,12 @@ export function deleteFeed(
     undefined,
     fetcher,
   );
+}
+
+export function requestFeedRefresh(
+  workspaceId: string,
+  feedId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ job: { id: string; status: "QUEUED" }; cooldownSeconds: number; cooldownUntil: string }> {
+  return post(`/api/feeds/${encodeURIComponent(feedId)}/refresh`, { workspaceId }, fetcher);
 }

@@ -48,7 +48,7 @@ test("detail page stays tenant-scoped and renders feed outputs, items, and refre
   assert.match(page, /<FeedItemTable items=/);
   assert.match(page, /Last refresh/);
   assert.match(page, /Next refresh/);
-  assert.doesNotMatch(page, /Manual refresh|Refresh now/);
+  assert.match(page, /<ManualRefreshButton workspaceId=\{workspaceId\}/);
 });
 
 test("output links are copyable and item rows include title, date, and URL", async () => {
@@ -68,7 +68,7 @@ test("output links are copyable and item rows include title, date, and URL", asy
   assert.match(items, /href="\/dashboard\/feeds\/new"/);
 });
 
-test("settings support pause, resume, and confirmed deletion without manual refresh", async () => {
+test("settings support pause, resume, and confirmed deletion", async () => {
   const settings = await source("../components/feed-settings-panel.tsx");
 
   assert.match(settings, /status === "PAUSED" \? "ACTIVE" : "PAUSED"/);
@@ -76,5 +76,4 @@ test("settings support pause, resume, and confirmed deletion without manual refr
   assert.match(settings, /window\.confirm/);
   assert.match(settings, /await deleteFeed\(workspaceId, feedId\)/);
   assert.match(settings, /router\.push\("\/dashboard"\)/);
-  assert.doesNotMatch(settings, /manual refresh|refresh now/i);
 });
