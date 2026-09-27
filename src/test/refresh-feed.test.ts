@@ -109,6 +109,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
     assert.deepEqual(result, { itemsFound: 3, itemsNew: 3, itemsChanged: 0 });
     const feed = await db.feed.findUniqueOrThrow({ where: { id: webpage.id } });
     assert.equal(feed.status, FeedStatus.DEGRADED);
+    assert.ok(feed.nextRefreshAt && feed.nextRefreshAt > new Date());
   });
 
   await t.test("refresh checks robots policy before the source and its redirect", async () => {
@@ -153,6 +154,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
     assert.equal(failed.status, FeedStatus.FAILED);
     assert.equal(failed.failureCount, 1);
     assert.ok(failed.lastFailureAt);
+    assert.ok(failed.nextRefreshAt && failed.nextRefreshAt > failed.lastFailureAt!);
     const log = await db.errorLog.findFirstOrThrow({ where: { feedId: native.id } });
     assert.equal(log.code, "FETCH_HTTP_ERROR");
 
@@ -168,6 +170,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
     assert.equal(recovered.status, FeedStatus.ACTIVE);
     assert.equal(recovered.failureCount, 0);
     assert.ok(recovered.lastSuccessAt);
+    assert.ok(recovered.nextRefreshAt && recovered.nextRefreshAt > recovered.lastSuccessAt!);
   });
 
   await t.test("paused feeds remain paused and are not fetched", async () => {

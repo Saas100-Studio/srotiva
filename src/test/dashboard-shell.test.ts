@@ -39,6 +39,13 @@ test("authenticated dashboard renders workspace identity and an empty state", as
   assert.match(switcher, /workspace\.name/);
 });
 
+test("dashboard renders computed feed health badges", async () => {
+  const page = await source("../app/dashboard/page.tsx");
+
+  assert.match(page, /getFeedHealth\(feed\)\.healthStatus/);
+  assert.match(page, /<FeedStatusBadge status=/);
+});
+
 test("homepage includes signup and login links without unsupported claims", async () => {
   const home = await source("../app/page.tsx");
 

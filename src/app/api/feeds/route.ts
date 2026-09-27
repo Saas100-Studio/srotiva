@@ -6,6 +6,7 @@ import { jsonError, jsonOk } from "../../../lib/api/responses.ts";
 import { requireWorkspaceRole } from "../../../lib/auth/workspace-access.ts";
 import { findFeedDetail, listFeeds } from "../../../lib/db/repositories/feeds.ts";
 import { parseSaveFeedInput, saveFeed } from "../../../lib/feed/feed-save-service.ts";
+import { withFeedHealth } from "../../../lib/feed/feed-health.ts";
 
 function routeError(error: unknown): unknown {
   if (!(error instanceof MorselApiError)) return error;
@@ -28,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!feed) throw new MorselApiError(500, "INTERNAL_ERROR", "The saved feed could not be read.");
     const token = encodeURIComponent(saved.privateToken);
     return jsonOk({
-      ...feed,
+      ...withFeedHealth(feed),
       itemCount: feed._count.items,
       _count: undefined,
       privateToken: saved.privateToken,
@@ -50,7 +51,7 @@ export async function GET(request: Request): Promise<Response> {
     if (!workspaceId) throw new MorselApiError(422, "VALIDATION_ERROR", "workspaceId is required.");
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspaceId)) throw new MorselApiError(422, "VALIDATION_ERROR", "workspaceId must be a UUID.");
     if (workspaceId !== context.workspace.id) throw new MorselApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
-    return jsonOk(await listFeeds(workspaceId));
+    return jsonOk((await listFeeds(workspaceId)).map((feed) => withFeedHealth(feed)));
   } catch (error) {
     return jsonError(routeError(error));
   }

@@ -13,6 +13,7 @@ import { loadEnv } from "../../../../lib/config/env.ts";
 import { findFeedDetail, initializePrivateFeedToken, listFeedItems } from "../../../../lib/db/repositories/feeds.ts";
 import { listRecentRefreshJobs } from "../../../../lib/db/repositories/jobs.ts";
 import { createPrivateFeedToken, hashPrivateFeedToken } from "../../../../lib/feed/feed-output-token.ts";
+import { getFeedHealth } from "../../../../lib/feed/feed-health.ts";
 
 function displayDate(value: Date | null): string {
   return value ? value.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }) : "Not scheduled";
@@ -38,13 +39,14 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
   const suffix = privateToken ? `?token=${encodeURIComponent(privateToken)}` : "";
   const outputBase = `${loadEnv().APP_URL}/f/${feed.outputSlug}`;
   const canManage = currentUser.activeWorkspace.role === "OWNER" || currentUser.activeWorkspace.role === "EDITOR";
+  const health = getFeedHealth(feed);
 
   return (
     <div className="feed-detail-page">
       <div className="page-heading">
         <div>
           <p className="eyebrow">Feed detail</p>
-          <div className="feed-detail-title"><h1>{feed.name}</h1><FeedStatusBadge status={feed.status} /></div>
+          <div className="feed-detail-title"><h1>{feed.name}</h1><FeedStatusBadge status={health.healthStatus} /></div>
           <p><a className="source-link" href={feed.sourceUrl} rel="noreferrer" target="_blank">{feed.sourceUrl}</a></p>
         </div>
       </div>
@@ -52,10 +54,13 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
       <div className="feed-detail-grid">
         <section className="feed-detail-card" aria-labelledby="feed-overview-heading">
           <h2 id="feed-overview-heading">Overview</h2>
+          <p>{health.healthMessage}</p>
           <dl className="feed-facts">
             <div><dt>Items</dt><dd>{feed._count.items}</dd></div>
             <div><dt>Source type</dt><dd>{feed.sourceType.toLowerCase()}</dd></div>
             <div><dt>Last refresh</dt><dd>{feed.lastRefreshedAt ? displayDate(feed.lastRefreshedAt) : "Not refreshed yet"}</dd></div>
+            <div><dt>Last success</dt><dd>{feed.lastSuccessAt ? displayDate(feed.lastSuccessAt) : "No successful refresh yet"}</dd></div>
+            <div><dt>Last failure</dt><dd>{feed.lastFailureAt ? displayDate(feed.lastFailureAt) : "No failures"}</dd></div>
             <div><dt>Next refresh</dt><dd>{displayDate(feed.nextRefreshAt)}</dd></div>
             <div><dt>Consecutive failures</dt><dd>{feed.failureCount}</dd></div>
           </dl>

@@ -245,7 +245,11 @@ h1, h2, p { margin-top: 0; }
 .feed-list li div span { overflow: hidden; color: var(--muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .status-badge { align-self: start; padding: 4px 8px; border-radius: 999px; background: var(--surface-soft); font-size: 12px; text-transform: capitalize; }
 .status-badge--active { background: #e4f5e9; color: #17652e; }
+.status-badge--healthy { background: #e4f5e9; color: #17652e; }
 .status-badge--paused { background: #fff0cf; color: #744800; }
+.status-badge--stale,
+.status-badge--degraded { background: #fff0cf; color: #744800; }
+.status-badge--failed { background: #fff1eb; color: #8f2b00; }
 
 .feed-create-page { width: min(100%, 820px); margin: 0 auto; }
 .feed-create { display: grid; gap: 24px; }

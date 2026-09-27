@@ -7,6 +7,7 @@ import { requireWorkspaceRole } from "../../../../lib/auth/workspace-access.ts";
 import { loadEnv } from "../../../../lib/config/env.ts";
 import { findFeedDetail, initializePrivateFeedToken, softDeleteFeed, updateFeed, type FeedPatch } from "../../../../lib/db/repositories/feeds.ts";
 import { createPrivateFeedToken, hashPrivateFeedToken } from "../../../../lib/feed/feed-output-token.ts";
+import { withFeedHealth } from "../../../../lib/feed/feed-health.ts";
 
 function routeError(error: unknown): unknown {
   if (!(error instanceof MorselApiError)) return error;
@@ -35,7 +36,7 @@ async function responseFeed(workspace: string, feed: NonNullable<Awaited<ReturnT
   const suffix = privateToken ? `?token=${encodeURIComponent(privateToken)}` : "";
   const base = `${loadEnv().APP_URL}/f/${feed.outputSlug}`;
   return {
-    ...feed,
+    ...withFeedHealth(feed),
     itemCount: feed._count.items,
     _count: undefined,
     ...(privateToken ? { privateToken } : {}),

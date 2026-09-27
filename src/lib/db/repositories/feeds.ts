@@ -12,6 +12,7 @@ import {
 import { isDeepStrictEqual } from "node:util";
 
 import { getDb } from "../client.ts";
+import { nextFailedRefreshAt, nextSuccessfulRefreshAt } from "../../feed/refresh-schedule.ts";
 
 const feedProjection = {
   id: true,
@@ -30,6 +31,8 @@ const feedProjection = {
   refreshIntervalMinutes: true,
   lastRefreshedAt: true,
   nextRefreshAt: true,
+  lastSuccessAt: true,
+  lastFailureAt: true,
   failureCount: true,
   createdAt: true,
   updatedAt: true,
@@ -388,7 +391,7 @@ export async function recordRefreshSuccess(input: {
         deletedAt: null,
         status: { in: [FeedStatus.ACTIVE, FeedStatus.DEGRADED, FeedStatus.FAILED] },
       },
-      select: { workspaceId: true },
+      select: { workspaceId: true, refreshIntervalMinutes: true },
     });
     if (!feed) throw new Error(`Feed ${input.feedId} is no longer refreshable`);
     const existing = await tx.feedItem.findMany({
@@ -450,6 +453,7 @@ export async function recordRefreshSuccess(input: {
         status: input.warnings.length ? FeedStatus.DEGRADED : FeedStatus.ACTIVE,
         lastRefreshedAt: now,
         lastSuccessAt: now,
+        nextRefreshAt: nextSuccessfulRefreshAt(now, feed.refreshIntervalMinutes),
         failureCount: 0,
       },
     });
@@ -488,11 +492,18 @@ export async function recordRefreshFailure(input: {
     lastModified: string | null;
   };
 }) {
-  const now = new Date();
   return getDb().$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM feeds WHERE id = ${input.feedId}::uuid FOR UPDATE`;
+    const now = new Date();
     const feed = await tx.feed.findUnique({
       where: { id: input.feedId },
-      select: { workspaceId: true, status: true, sources: { select: { id: true }, take: 1 } },
+      select: {
+        workspaceId: true,
+        status: true,
+        refreshIntervalMinutes: true,
+        failureCount: true,
+        sources: { select: { id: true }, take: 1 },
+      },
     });
     if (!feed) return;
     const refreshable = feed.status === FeedStatus.ACTIVE ||
@@ -507,6 +518,7 @@ export async function recordRefreshFailure(input: {
           status: FeedStatus.FAILED,
           lastRefreshedAt: now,
           lastFailureAt: now,
+          nextRefreshAt: nextFailedRefreshAt(now, feed.refreshIntervalMinutes, feed.failureCount + 1),
           failureCount: { increment: 1 },
         },
       });

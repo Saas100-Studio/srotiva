@@ -48,6 +48,9 @@ test("detail page stays tenant-scoped and renders feed outputs, items, and refre
   assert.match(page, /<FeedItemTable items=/);
   assert.match(page, /Last refresh/);
   assert.match(page, /Next refresh/);
+  assert.match(page, /health\.healthMessage/);
+  assert.match(page, /Last success/);
+  assert.match(page, /Last failure/);
   assert.match(page, /<ManualRefreshButton workspaceId=\{workspaceId\}/);
 });
 

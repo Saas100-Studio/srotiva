@@ -27,3 +27,7 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Refresh pipeline: send conditional `If-None-Match`/`If-Modified-Since` requests and handle `304` once the shared fetcher accepts safe caller headers.
 - Refresh pipeline: persist `robotsStatus=disallowed` on robots denials and suppress noisy error logs for stale jobs that encounter an already paused or deleted feed.
 - Manual refresh: add a live cooldown countdown and browser-level click coverage if static retry feedback proves unclear in usability testing.
+- Refresh scheduler: add a database-enforced partial uniqueness guard for open jobs if future enqueue paths bypass the feed-row locking used by the scheduler and manual refresh service.
+- Feed health: tune the three-failure threshold and stale messaging from production refresh telemetry rather than adding configuration before real usage exists.
+- Feed health: define a distinct draft health state if a user-facing draft workflow is introduced; current MVP feeds are activated on save.
+- Refresh scheduler: backfill `next_refresh_at` before beta only if the pre-S04 pre-alpha database is promoted instead of starting with a clean production database.

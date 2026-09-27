@@ -6,6 +6,7 @@ import { EmptyState } from "../../components/empty-state.tsx";
 import { getOptionalCurrentUserFromCookieHeader } from "../../lib/auth/current-user.ts";
 import { requireDashboardUser } from "../../lib/auth/dashboard.ts";
 import { listFeeds } from "../../lib/db/repositories/feeds.ts";
+import { getFeedHealth } from "../../lib/feed/feed-health.ts";
 
 type DashboardFeed = Awaited<ReturnType<typeof listFeeds>>[number];
 
@@ -45,7 +46,7 @@ export function DashboardIndex({
                   <strong><Link href={`/dashboard/feeds/${feed.id}`}>{feed.name}</Link></strong>
                   <span>{feed.sourceUrl}</span>
                 </div>
-                <FeedStatusBadge status={feed.status} />
+                <FeedStatusBadge status={getFeedHealth(feed).healthStatus} />
               </li>
             ))}
           </ul>

@@ -7,6 +7,7 @@ import { normalizeUserUrl } from "../crawler/url-safety.ts";
 import { getDb } from "../db/client.ts";
 import { createPrivateFeedToken, hashPrivateFeedToken } from "./feed-output-token.ts";
 import { createItemFingerprint } from "./fingerprint.ts";
+import { nextSuccessfulRefreshAt } from "./refresh-schedule.ts";
 
 type JsonObject = Record<string, Prisma.JsonValue>;
 type SaveItem = {
@@ -136,6 +137,7 @@ export async function saveFeed(input: SaveFeedInput, createdByUserId: string) {
         description: input.feedDescription, status: FeedStatus.ACTIVE,
         visibility: FeedVisibility.PRIVATE, sourceType: input.sourceType,
         sourceUrl: input.sourceUrl, refreshIntervalMinutes: 1440,
+        nextRefreshAt: nextSuccessfulRefreshAt(new Date(), 1440),
         publicRssUrl: `${outputUrl}/rss`, publicJsonUrl: `${outputUrl}/json`, publicCsvUrl: `${outputUrl}/csv`,
         sources: { create: { kind: input.sourceKind, url: input.sourceUrl } },
       },

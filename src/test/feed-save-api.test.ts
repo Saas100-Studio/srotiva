@@ -62,11 +62,14 @@ test("feed save and management APIs preserve tenant boundaries and soft-delete r
       ],
       warnings: [],
     }));
-    const nativeBody = await nativeResponse.json() as { data: { id: string; status: string; visibility: string; refreshIntervalMinutes: number } };
+    const nativeBody = await nativeResponse.json() as { data: { id: string; status: string; visibility: string; refreshIntervalMinutes: number; healthStatus: string; healthMessage: string; nextRefreshAt: string } };
     assert.equal(nativeResponse.status, 201);
     assert.equal(nativeBody.data.status, "ACTIVE");
     assert.equal(nativeBody.data.visibility, "PRIVATE");
     assert.equal(nativeBody.data.refreshIntervalMinutes, 1440);
+    assert.equal(nativeBody.data.healthStatus, "healthy");
+    assert.match(nativeBody.data.healthMessage, /first scheduled refresh/);
+    assert.ok(nativeBody.data.nextRefreshAt);
 
     const stored = await db.feedItem.findFirstOrThrow({ where: { feedId: nativeBody.data.id } });
     assert.equal(stored.fingerprint, createItemFingerprint({ feedUrl: nativeUrl, canonicalUrl: "https://example.com/one", title: "one", datePublished: "2026-01-01T00:00:00.000Z" }));
@@ -99,9 +102,15 @@ test("feed save and management APIs preserve tenant boundaries and soft-delete r
     }));
     const otherFeedId = (await otherResponse.json() as { data: { id: string } }).data.id;
     const listResponse = await list(request(`http://localhost/api/feeds?workspaceId=${workspace.id}`, cookie));
-    const listBody = await listResponse.json() as { data: Array<{ id: string }> };
+    const listBody = await listResponse.json() as { data: Array<{ id: string; healthStatus: string; healthMessage: string; lastSuccessAt: string | null; lastFailureAt: string | null; nextRefreshAt: string | null; failureCount: number }> };
     assert.equal(listBody.data.length, 2);
     assert.ok(!listBody.data.some((feed) => feed.id === otherFeedId));
+    assert.equal(listBody.data[0]?.healthStatus, "healthy");
+    assert.equal(typeof listBody.data[0]?.healthMessage, "string");
+    assert.equal(listBody.data[0]?.lastSuccessAt, null);
+    assert.equal(listBody.data[0]?.lastFailureAt, null);
+    assert.ok(listBody.data[0]?.nextRefreshAt);
+    assert.equal(listBody.data[0]?.failureCount, 0);
 
     assert.equal((await list(request(`http://localhost/api/feeds?workspaceId=${workspace.id}`, viewerCookie))).status, 200);
     assert.equal((await create(request("http://localhost/api/feeds", viewerCookie, "POST", {
@@ -111,8 +120,10 @@ test("feed save and management APIs preserve tenant boundaries and soft-delete r
     assert.equal((await handleFeedDelete(request(`http://localhost/api/feeds/${nativeBody.data.id}?workspaceId=${workspace.id}`, viewerCookie, "DELETE"), nativeBody.data.id)).status, 403);
 
     const detailResponse = await handleFeedGet(request(`http://localhost/api/feeds/${nativeBody.data.id}?workspaceId=${workspace.id}`, cookie), nativeBody.data.id);
-    const detailBody = await detailResponse.json() as { data: { itemCount: number; sources: Array<{ kind: string; url: string }> } };
+    const detailBody = await detailResponse.json() as { data: { itemCount: number; healthStatus: string; healthMessage: string; sources: Array<{ kind: string; url: string }> } };
     assert.equal(detailBody.data.itemCount, 1);
+    assert.equal(detailBody.data.healthStatus, "healthy");
+    assert.equal(typeof detailBody.data.healthMessage, "string");
     assert.deepEqual(detailBody.data.sources.map(({ kind, url }) => ({ kind, url })), [{ kind: "RSS", url: nativeUrl }]);
 
     const patchResponse = await handleFeedPatch(request(`http://localhost/api/feeds/${nativeBody.data.id}?workspaceId=${workspace.id}`, cookie, "PATCH", { name: "Renamed", status: "PAUSED" }), nativeBody.data.id);
