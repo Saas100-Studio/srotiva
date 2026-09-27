@@ -13,3 +13,4 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Feed discovery: thread injected network collaborators through nested native discovery if tests need the real nested path without network access.
 - HTML extractor: add JSON-LD/OpenGraph article dates and lazy-loaded/srcset images when real fixture failures justify broader heuristics.
 - HTML extractor: broaden repeated-card detection beyond `article` and heading-based cards when production pages demonstrate a missed stable pattern.
+- Public outputs: add a globally resolvable output slug and hashed private access token in S02-T05; feed slugs are currently unique only within a workspace.

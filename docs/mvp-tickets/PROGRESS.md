@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 02 - Discovery and Creation APIs
-- Next ticket (not started): `S02-T04-feed-save-and-items-api.md`
+- Next ticket (not started): `S02-T05-public-output-endpoints.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -60,7 +60,7 @@ Do not write real secrets in this file.
 | S02-T01 Native Feed Discovery | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/native-feed-discovery.test.ts src/test/http-fetcher.test.ts src/test/robots-policy.test.ts src/test/native-parser.test.ts`; `bun run check` | Safe page fetch, RSS/Atom alternate-link discovery, final-URL resolution, deduplication, same-origin common-path probes, native-feed validation, and pre-redirect robots enforcement are complete. All 95 tests, lint, strict typecheck, and production build pass. |
 | S02-T02 Static HTML Extractor | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/html-extractor.test.ts`; `bun run check` | Deterministic static article/card extraction, URL normalization, exact URL deduplication, plain-text description cleanup, confidence enforcement, fingerprints, fallback images, and the 25-item preview cap are complete. All 100 tests, lint, strict typecheck, and production build pass. |
 | S02-T03 Feed Discover Preview API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-discover-api.test.ts`; `bun run check` | Authenticated active-workspace previews prefer direct or discovered RSS/Atom, fall back to static HTML, cap results at 10 items, preserve crawler safety and robots checks, validate request shapes, return stable ticket error codes, and write no feed rows. All 110 tests, lint, strict typecheck, and production build pass. |
-| S02-T04 Feed Save and Items API | Not Started |  |  |  |
+| S02-T04 Feed Save and Items API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-save-api.test.ts src/test/feed-items-api.test.ts`; `bun run check` | Atomic native/webpage saves, server-recomputed exact fingerprints, tenant-role enforcement, feed CRUD, projected detail/list/item responses, null-last cursor pagination, cross-workspace mutation guards, and row-retaining soft delete are complete. All 113 tests, lint, strict typecheck, and production build pass. No migration or dependency was needed. |
 | S02-T05 Public RSS, JSON, and CSV Output Endpoints | Not Started |  |  |  |
 | S03-T01 Authenticated Dashboard Shell | Not Started |  |  | First user-facing sprint starts here. |
 | S03-T02 Feed Creation UI | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S02-T03 needs no new environment variables.
+No blockers recorded. S02-T05 needs no new environment variables.
 
 ## Decisions
 

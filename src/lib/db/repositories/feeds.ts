@@ -1,13 +1,153 @@
 import {
   FeedItemStatus,
   FeedSourceKind,
+  FeedStatus,
   type Feed,
   type FeedItem,
   type FeedSourceType,
+  type FeedVisibility,
   type Prisma,
 } from "@prisma/client";
 
 import { getDb } from "../client.ts";
+
+const feedProjection = {
+  id: true,
+  workspaceId: true,
+  name: true,
+  slug: true,
+  description: true,
+  status: true,
+  visibility: true,
+  sourceType: true,
+  sourceUrl: true,
+  refreshIntervalMinutes: true,
+  lastRefreshedAt: true,
+  nextRefreshAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.FeedSelect;
+
+export function listFeeds(workspaceId: string) {
+  return getDb().feed.findMany({
+    where: { workspaceId, deletedAt: null, status: { not: FeedStatus.DELETED } },
+    select: feedProjection,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+}
+
+export function findFeedDetail(workspaceId: string, feedId: string) {
+  return getDb().feed.findFirst({
+    where: {
+      id: feedId,
+      workspaceId,
+      deletedAt: null,
+      status: { not: FeedStatus.DELETED },
+    },
+    select: {
+      ...feedProjection,
+      sources: {
+        select: {
+          id: true,
+          kind: true,
+          url: true,
+          etag: true,
+          lastModified: true,
+          lastHttpStatus: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      _count: { select: { items: true } },
+    },
+  });
+}
+
+export type FeedPatch = {
+  name?: string;
+  description?: string | null;
+  status?: FeedStatus;
+  visibility?: FeedVisibility;
+};
+
+export async function updateFeed(
+  workspaceId: string,
+  feedId: string,
+  data: FeedPatch,
+) {
+  const result = await getDb().feed.updateMany({
+    where: {
+      id: feedId,
+      workspaceId,
+      deletedAt: null,
+      status: { not: FeedStatus.DELETED },
+    },
+    data,
+  });
+  return result.count ? findFeedDetail(workspaceId, feedId) : null;
+}
+
+export async function softDeleteFeed(workspaceId: string, feedId: string) {
+  const result = await getDb().feed.updateMany({
+    where: {
+      id: feedId,
+      workspaceId,
+      deletedAt: null,
+      status: { not: FeedStatus.DELETED },
+    },
+    data: { status: FeedStatus.DELETED, deletedAt: new Date() },
+  });
+  return result.count > 0;
+}
+
+export async function listFeedItems(
+  workspaceId: string,
+  feedId: string,
+  limit: number,
+  cursor?: string,
+) {
+  if (cursor) {
+    const validCursor = await getDb().feedItem.findFirst({
+      where: { id: cursor, workspaceId, feedId },
+      select: { id: true },
+    });
+    if (!validCursor) return null;
+  }
+  const items = await getDb().feedItem.findMany({
+    where: {
+      workspaceId,
+      feedId,
+      feed: { deletedAt: null, status: { not: FeedStatus.DELETED } },
+    },
+    select: {
+      id: true,
+      fingerprint: true,
+      sourceItemId: true,
+      canonicalUrl: true,
+      url: true,
+      title: true,
+      descriptionText: true,
+      descriptionHtml: true,
+      author: true,
+      imageUrl: true,
+      datePublished: true,
+      dateModified: true,
+      status: true,
+      firstSeenAt: true,
+      lastSeenAt: true,
+    },
+    orderBy: [
+      { datePublished: { sort: "desc", nulls: "last" } },
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    take: limit + 1,
+  });
+  return {
+    items: items.slice(0, limit),
+    nextCursor: items.length > limit ? items[limit - 1]?.id ?? null : null,
+  };
+}
 
 export type CreateFeedInput = {
   workspaceId: string;
@@ -100,10 +240,8 @@ export function upsertFeedItem({
 
   return getDb().feedItem.upsert({
     where: {
-      feedId_fingerprint: {
-        feedId,
-        fingerprint: item.fingerprint,
-      },
+      feedId_fingerprint: { feedId, fingerprint: item.fingerprint },
+      workspaceId,
     },
     create: {
       workspaceId,
