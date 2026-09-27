@@ -7,9 +7,9 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 05 - Filters and Production Hardening
-- Next ticket (not started): `S05-T05-production-readiness-gate.md`
-- Release stage: pre-alpha, internal development only
-- User-facing release: not ready
+- Next ticket: none; MVP implementation queue complete
+- Release stage: internal MVP beta candidate
+- User-facing release: blocked on the external production controls listed below
 
 ## How to Update This File
 
@@ -74,7 +74,7 @@ Do not write real secrets in this file.
 | S05-T02 Filter API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-api.test.ts src/test/filter-preview-api.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped viewer listing and editor CRUD now validate and store basic per-feed keyword rules. Preview combines saved enabled rules with an unsaved candidate, scans existing active/filtered items in stable UUID cursor batches for exact counts, returns bounded samples with reasons, and does not mutate items or filters. No migration or dependency was needed. All 154 tests, lint, strict typecheck, and production build pass. |
 | S05-T03 Filter UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Feed detail now loads and displays saved keyword rules for every workspace member. Editors can validate and create whitelist/blacklist rules, preview exact included/excluded counts with bounded samples and reasons, enable/disable rules, and confirm deletion; viewers remain read-only. Pending, empty, validation, and request-ID error states are covered. No migration or dependency was needed. All 157 tests, lint, strict typecheck, and production build pass. |
 | S05-T04 Rate Limits and Observability | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/rate-limit.test.ts src/test/workspace-access.test.ts src/test/feed-diagnostics-api.test.ts src/test/auth-routes.test.ts src/test/feed-discover-api.test.ts src/test/manual-refresh-api.test.ts src/test/public-output-routes.test.ts`; `bun run typecheck`; `bun run lint`; `bun run check` | Bounded process-local fixed-window limits protect signup, login, discovery, manual refresh, and shared RSS/JSON/CSV output rendering with `RATE_LIMITED` and `Retry-After`; saturated storage purges expired buckets and otherwise fails closed without evicting live limits. Highest-risk route failures emit token-free structured JSON with request IDs and error codes, discovery failures persist safe database records, existing refresh failure records remain single-written, and joined `SUPPORT` workspace members can inspect tenant-scoped token-free feed diagnostics. Pending invitations are excluded from both authorization and current-user workspace selection. The existing support role avoided a schema migration. All 167 tests, lint, strict typecheck, and production build pass. |
-| S05-T05 MVP Production Readiness Gate | Not Started |  |  |  |
+| S05-T05 MVP Production Readiness Gate | Done | `main` | `bun run validate-env`; `node --env-file-if-exists=.env.local --test src/test/health-route.test.ts src/test/mvp-smoke.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check`; `bunx prisma validate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script` | A no-store readiness endpoint reports app version and bounded, coalesced database readiness without secrets; external refresh processes are honestly marked not checked. Strict environment validation is runnable and testable, a database-backed no-network smoke covers the full MVP path, refresh error details redact URL query secrets, and linked draft legal placeholders plus deployment/runbook documentation define the production gate. No migration or dependency was needed. All 173 tests, lint, strict typecheck, and production build pass; Prisma reports no pending migration or schema drift. Public launch remains blocked on hosting, backups/restore, trusted proxy configuration, durable monitoring, paced scheduler/worker execution, and legal review. |
 
 ## Sprint Release Notes Draft
 
@@ -120,15 +120,15 @@ Message: Feeds now update automatically and show refresh status, making Morsel u
 
 ### Sprint 05 - Filters and Production Hardening
 
-Release type: MVP beta.
+Release type: internal MVP beta candidate; public release blocked on external controls.
 
 Expected user-facing change: users can filter noisy feed items, see better errors, and rely on a more stable beta product.
 
-Message: MVP beta is ready with feed creation, auto-refresh, output links, basic filtering, safer rate limits, and production readiness checks.
+Message: The MVP feature surface is complete with feed creation, auto-refresh, output links, basic filtering, safer rate limits, and automated readiness checks. Public launch still requires the documented operational and legal controls.
 
 ## Blockers
 
-No blockers recorded. S05-T05 needs no new environment variables.
+Public production release blockers: select and configure hosting for the web, scheduler, and worker; verify database backups and restore; trust forwarded IPs only through the selected proxy; ship logs and alerts to a durable sink; provide production DNS/TLS/secrets; and complete qualified legal review of the placeholder policies. No new application environment variables are required.
 
 ## Decisions
 

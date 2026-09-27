@@ -10,6 +10,7 @@ const navigation = [
   ["Create feed", "/dashboard/feeds/new"],
   ["Settings", "/dashboard/settings"],
   ["Help", "/help"],
+  ["Legal", "/legal/terms"],
 ] as const;
 
 export function AppShell({

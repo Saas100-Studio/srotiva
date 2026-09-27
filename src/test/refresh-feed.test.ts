@@ -136,6 +136,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
 
   await t.test("failed fetch retains items, increments health, and writes an error log", async () => {
     const before = await db.feedItem.count({ where: { feedId: native.id } });
+    const secret = "must-not-reach-error-logs";
     await assert.rejects(
       refreshFeed(
         { feedId: native.id, trigger: RefreshTrigger.RETRY },
@@ -143,7 +144,10 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
           checkRobotsAllowed: allowed,
           getCrawlerUserAgent: () => "MorselTest/1.0",
           fetchDocument: async () => {
-            throw new MorselApiError(502, "FETCH_HTTP_ERROR", "Upstream failed.", { status: 503 });
+            throw new MorselApiError(502, "FETCH_HTTP_ERROR", "Upstream failed.", {
+              status: 503,
+              url: `https://example.com/feed.xml?token=${secret}`,
+            });
           },
         },
       ),
@@ -157,6 +161,8 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
     assert.ok(failed.nextRefreshAt && failed.nextRefreshAt > failed.lastFailureAt!);
     const log = await db.errorLog.findFirstOrThrow({ where: { feedId: native.id } });
     assert.equal(log.code, "FETCH_HTTP_ERROR");
+    assert.doesNotMatch(JSON.stringify(log.details), new RegExp(secret));
+    assert.equal((log.details as { url?: string }).url, "https://example.com/feed.xml");
 
     await refreshFeed(
       { feedId: native.id, trigger: RefreshTrigger.RETRY },

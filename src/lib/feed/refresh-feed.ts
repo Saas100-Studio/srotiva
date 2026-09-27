@@ -29,9 +29,25 @@ type RefreshFeedDependencies = {
   getCrawlerUserAgent?: typeof getCrawlerUserAgent;
 };
 
+function safeErrorDetails(details: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(details).map(([key, value]) => {
+    if (typeof value !== "string" || !key.toLowerCase().includes("url")) return [key, value];
+    try {
+      const url = new URL(value);
+      url.username = "";
+      url.password = "";
+      url.search = "";
+      url.hash = "";
+      return [key, url.toString()];
+    } catch {
+      return [key, "[redacted]"];
+    }
+  }));
+}
+
 function refreshError(error: unknown): { code: string; message: string; details: Record<string, unknown> } {
   if (error instanceof MorselApiError) {
-    return { code: error.code, message: error.message, details: error.details };
+    return { code: error.code, message: error.message, details: safeErrorDetails(error.details) };
   }
   return {
     code: "REFRESH_FAILED",

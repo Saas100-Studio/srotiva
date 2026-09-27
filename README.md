@@ -1,63 +1,84 @@
 # Morsel
 
-Small bites from the live web.
+Morsel turns public websites and native RSS/Atom sources into refreshed RSS,
+JSON, and CSV feeds. The current product is the single-workspace MVP described
+in `docs/mvp-tickets/`.
 
-Morsel is a Next.js product concept for turning websites, newsletters, and
-social sources into clean feeds, embeddable widgets, automation bots,
-integrations, and monitoring workflows.
+## Local setup
 
-## Run
-
-Copy `.env.example` to `.env.local`, replace the placeholder values, then install
-dependencies and start the development server:
+Requirements: Bun 1.3.9 and PostgreSQL.
 
 ```bash
 cp .env.example .env.local
 bun install
-bun run dev
-```
-
-In separate terminals, start the refresh worker and scheduler processes:
-
-```bash
-bun run worker:refresh
-bun run scheduler
-```
-
-These placeholders currently print readiness and exit cleanly. The worker
-pipeline and due-feed scheduler are added in the next Sprint 04 tickets.
-
-Required environment variables:
-
-- `APP_URL`: Public base URL for the app. Use `http://localhost:3000` locally.
-- `DATABASE_URL`: PostgreSQL connection URL.
-- `SESSION_SECRET`: Random session secret containing at least 32 characters.
-- `CRAWLER_USER_AGENT`: Identifiable user agent sent by the crawler.
-- `FETCH_TIMEOUT_MS`: Positive request timeout in milliseconds.
-- `FETCH_MAX_BYTES`: Positive maximum response size in bytes.
-- `MANUAL_REFRESH_COOLDOWN_SECONDS`: Positive cooldown between manual refreshes.
-
-## Database
-
-Morsel uses PostgreSQL through Prisma. After setting `DATABASE_URL`, generate the
-client and apply the development migrations:
-
-```bash
+bun run validate-env
 bun run db:generate
 bun run db:migrate
 bun run db:seed
+bun run dev
 ```
 
-The seed command creates an idempotent development-only user, workspace, and
-feed fixture. Run database tests only with `DATABASE_URL` pointing to a migrated
-local development or test database; the tests create uniquely named records and
-remove them when finished.
+Replace every `.env.local` placeholder first. Never commit that file. Required
+settings are `APP_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 random
+characters), `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, `FETCH_MAX_BYTES`, and
+`MANUAL_REFRESH_COOLDOWN_SECONDS`.
 
-## Verify
+## Runtime processes
+
+The web app is long-running:
 
 ```bash
-bun run check
+bun run build
+bun run start
 ```
 
-The check command runs lint, strict type checks, the Node test suite (including
-database constraints), and a production Next.js build.
+The scheduler and worker are intentionally one-shot database-backed commands.
+Run the scheduler periodically. Each worker invocation processes at most one
+job, so invoke it on a paced schedule with delay/backoff under a process
+manager. Do not configure an unconditional immediate restart loop:
+
+```bash
+bun run scheduler
+bun run worker:refresh
+```
+
+Production hosting must provide those schedules separately from the web
+process. The readiness endpoint is `GET /api/health`; it returns 200 only while
+the database is reachable. Scheduler and worker processes are external and are
+reported as `not_checked`, not inferred healthy by this endpoint.
+
+## Database deployment
+
+Apply committed migrations before starting a new web release:
+
+```bash
+bunx prisma migrate deploy
+```
+
+Use `bun run db:migrate` only for local migration development. The seed is a
+development fixture, not a production bootstrap command.
+
+## Verify before release
+
+Only run the full suite against an isolated, migrated test database. Never point
+`bun run check` at production:
+
+```bash
+bun run validate-env
+bun run check
+bunx prisma validate
+```
+
+For production deployment, validate configuration and apply migrations without
+running destructive test fixtures:
+
+```bash
+bun run validate-env
+bunx prisma validate
+bunx prisma migrate deploy
+```
+
+`bun run check` runs lint, strict type checks, database-backed tests, and a
+production build. Tests create and delete records. After deployment, use
+`/api/health` and non-mutating output checks only. See
+`docs/mvp-production-readiness.md` for deployment gates and external blockers.

@@ -45,3 +45,10 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Rate limits: add explicit signup and manual-refresh saturation route tests if those limits diverge from the shared limiter behavior.
 - Support diagnostics: add cross-workspace support and empty job/error-history coverage if the diagnostics response grows beyond its current tenant-scoped query.
 - Observability: add an end-to-end assertion correlating one request ID across response, structured log, and database error log when log capture is standardized.
+- Production: replace process-local rate limits with Redis or equivalent before running multiple web instances.
+- Production: add worker leases/stale-job recovery before running continuously at meaningful queue volume.
+- Production: add durable log shipping, alerting, database backup/restore drills, and incident runbooks after choosing a hosting provider.
+- Production: replace legal placeholders with counsel-reviewed Terms, Privacy, Acceptable Use, and takedown contacts before public launch.
+- Production readiness: add built-server post-deploy smoke coverage after selecting a hosting target; current database smoke calls route handlers directly.
+- Environment validation: add subprocess exit-code coverage if the CLI output or invocation contract grows beyond the tested validation function.
+- Public outputs: prevent arbitrary nonexistent slugs from consuming distinct in-memory limiter buckets before public exposure without an upstream edge limiter.

@@ -6,6 +6,13 @@ const articles = [
   ["Troubleshooting", "Understand unsafe URLs, blocked sources, missing feeds, and empty feeds.", "/help/troubleshooting"],
 ] as const;
 
+const legal = [
+  ["Terms", "/legal/terms"],
+  ["Privacy", "/legal/privacy"],
+  ["Acceptable use", "/legal/acceptable-use"],
+  ["Takedown requests", "/legal/takedown"],
+] as const;
+
 export default function HelpPage() {
   return (
     <main className="help-page">
@@ -25,6 +32,11 @@ export default function HelpPage() {
             </Link>
           ))}
         </div>
+        <h2>Legal</h2>
+        <p>These pages are draft placeholders pending legal review.</p>
+        <nav aria-label="Legal pages">
+          {legal.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
+        </nav>
       </div>
     </main>
   );
