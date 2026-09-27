@@ -14,3 +14,6 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - HTML extractor: add JSON-LD/OpenGraph article dates and lazy-loaded/srcset images when real fixture failures justify broader heuristics.
 - HTML extractor: broaden repeated-card detection beyond `article` and heading-based cards when production pages demonstrate a missed stable pattern.
 - Public outputs: add explicit private-token rotation when users need to revoke a shared output URL.
+- Dashboard: add workspace switching only after an active-workspace selection API and session behavior are defined.
+- Dashboard: add the settings destination before public launch; the shell link is reserved but no settings workflow is in the current MVP ticket pack.
+- Dashboard: keep account identity visible in the compact mobile shell when the final navigation pattern is designed.
