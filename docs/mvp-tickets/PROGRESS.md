@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 03 - User Dashboard
-- Next ticket (not started): `S03-T02-feed-creation-ui.md`
+- Next ticket (not started): `S03-T03-feed-detail-ui.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -63,7 +63,7 @@ Do not write real secrets in this file.
 | S02-T04 Feed Save and Items API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-save-api.test.ts src/test/feed-items-api.test.ts`; `bun run check` | Atomic native/webpage saves, server-recomputed exact fingerprints, tenant-role enforcement, feed CRUD, projected detail/list/item responses, null-last cursor pagination, cross-workspace mutation guards, and row-retaining soft delete are complete. All 113 tests, lint, strict typecheck, and production build pass. No migration or dependency was needed. |
 | S02-T05 Public RSS, JSON, and CSV Output Endpoints | Done | `main` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `node --env-file-if-exists=.env.local --test src/test/public-output-routes.test.ts src/test/feed-save-api.test.ts src/test/feed-renderers.test.ts src/test/csv-safety.test.ts`; `bun run check` | Globally unique output slugs, hashed deterministic private tokens, owner-facing tokenized URLs, public/unlisted/private access, active-only bounded items, canonical token-free RSS self links, cache policies, and RSS/JSON/CSV routes are complete. Database and Prisma schema have no drift. All 114 tests, lint, strict typecheck, and production build pass. |
 | S03-T01 Authenticated Dashboard Shell | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/dashboard-shell.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Protected workspace-aware shell, honest MVP homepage, real saved-feed summary/empty state, loading state, account identity, accessible button contrast, and required navigation are complete. The obsolete mock builder and unsupported feature claims were removed. All 115 tests, lint, strict typecheck, and production build pass. |
-| S03-T02 Feed Creation UI | Not Started |  |  |  |
+| S03-T02 Feed Creation UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/feed-create-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Authenticated URL discovery, native/webpage preview labels, plain-language unsafe/empty-source errors, warning states, name override, stale-preview protection, guarded save, and feed-detail redirect are complete. All 119 tests, lint, strict typecheck, and production build pass. No dependency, API, or database changes were needed. |
 | S03-T03 Feed Detail UI | Not Started |  |  |  |
 | S03-T04 Help, Empty States, and Error States | Not Started |  |  |  |
 | S04-T01 Refresh Queue and Worker Shell | Not Started |  |  | MVP uses database-backed jobs first. |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S03-T02 needs no new environment variables.
+No blockers recorded. S03-T03 needs no new environment variables.
 
 ## Decisions
 

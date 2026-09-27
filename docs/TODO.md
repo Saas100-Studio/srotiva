@@ -17,3 +17,5 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Dashboard: add workspace switching only after an active-workspace selection API and session behavior are defined.
 - Dashboard: add the settings destination before public launch; the shell link is reserved but no settings workflow is in the current MVP ticket pack.
 - Dashboard: keep account identity visible in the compact mobile shell when the final navigation pattern is designed.
+- Feed creation UI: add browser-level discovery and save-flow coverage when the project adopts an end-to-end test harness.
+- Feed creation UI: move focus to loading, error, and preview regions if usability testing shows keyboard users miss state changes.
