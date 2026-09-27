@@ -34,3 +34,6 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Filters: extend filtered-output regression coverage across RSS and CSV in addition to JSON if their shared active-item query is split in the future.
 - Filters: add explicit refresh regressions for preserved hidden/deleted states and malformed legacy filter JSON when historical-data migration becomes relevant.
 - Filters: add workspace-global rules and whole-history re-filtering only when those post-MVP workflows are introduced; MVP evaluates feed rules on items observed during refresh.
+- Filter API: make feed existence checks and filter mutations one transaction if concurrent feed deletion becomes a supported workflow requiring snapshot-consistent errors.
+- Filter API: authenticate before parsing mutation bodies if unauthenticated callers must always receive authorization errors instead of body-validation errors.
+- Filter API: explicitly reject or map future `FeedFilterType` values in API projections before advanced rule types are exposed through the per-feed endpoints.

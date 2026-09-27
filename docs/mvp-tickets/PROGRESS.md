@@ -7,7 +7,7 @@ Use this file to help Codex agents understand the current implementation state w
 ## Current State
 
 - Current sprint: Sprint 05 - Filters and Production Hardening
-- Next ticket (not started): `S05-T02-filter-api.md`
+- Next ticket (not started): `S05-T03-filter-ui.md`
 - Release stage: pre-alpha, internal development only
 - User-facing release: not ready
 
@@ -71,7 +71,7 @@ Do not write real secrets in this file.
 | S04-T03 Manual Refresh API and Throttle | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/manual-refresh-api.test.ts src/test/manual-refresh-ui.test.ts src/test/feed-detail-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped editors can atomically enqueue high-priority manual jobs without fetching in the request. A feed-row lock serializes concurrent requests, cooldown responses report seconds remaining, paused feeds are rejected, successful requests are audited, and the detail UI shows queued, throttled, and paused states. No migration or dependency was needed. All 144 tests, lint, strict typecheck, and production build pass. |
 | S04-T04 Scheduler and Feed Health | Done | `main` | `bun run lint`; `bun run typecheck`; `node --env-file-if-exists=.env.local --test src/test/refresh-scheduler.test.ts src/test/feed-health.test.ts src/test/refresh-feed.test.ts src/test/feed-save-api.test.ts src/test/dashboard-shell.test.ts src/test/feed-detail-ui.test.ts`; `node --env-file-if-exists=.env.local --test src/test/refresh-scheduler.test.ts`; `bun run check` | A row-locking scheduler queues due refreshable feeds without duplicating open jobs. New feeds receive an initial schedule, successful runs schedule the configured interval, failures use capped exponential backoff, feed list/detail APIs expose health summaries and timestamps, and dashboard pages show actionable health states. The first full check exposed a concurrent-test assertion that was corrected to scope its verification to the test workspace. No migration or dependency was needed. All 150 tests, lint, strict typecheck, and production build pass. |
 | S05-T01 Basic Filter Engine | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-engine.test.ts src/test/refresh-with-filters.test.ts src/test/refresh-feed.test.ts src/test/public-output-routes.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Deterministic Unicode-normalized keyword rules cover title, description, URL, and author fields. Blacklists win, whitelists require a match, refreshes persist explainable filtered states and reactivate items when rules change, and public outputs remain active-only. Hidden/deleted item states are preserved. No migration or dependency was needed. All 152 tests, lint, strict typecheck, and production build pass. |
-| S05-T02 Filter API | Not Started |  |  |  |
+| S05-T02 Filter API | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-api.test.ts src/test/filter-preview-api.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Tenant-scoped viewer listing and editor CRUD now validate and store basic per-feed keyword rules. Preview combines saved enabled rules with an unsaved candidate, scans existing active/filtered items in stable UUID cursor batches for exact counts, returns bounded samples with reasons, and does not mutate items or filters. No migration or dependency was needed. All 154 tests, lint, strict typecheck, and production build pass. |
 | S05-T03 Filter UI | Not Started |  |  |  |
 | S05-T04 Rate Limits and Observability | Not Started |  |  |  |
 | S05-T05 MVP Production Readiness Gate | Not Started |  |  |  |
@@ -128,7 +128,7 @@ Message: MVP beta is ready with feed creation, auto-refresh, output links, basic
 
 ## Blockers
 
-No blockers recorded. S05-T02 needs no new environment variables.
+No blockers recorded. S05-T03 needs no new environment variables.
 
 ## Decisions
 
