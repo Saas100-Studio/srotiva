@@ -23,6 +23,42 @@ export type FeedPreview = {
   warnings: string[];
 };
 
+type FeedFilterType = "whitelist" | "blacklist";
+type FeedFilterField = "any" | "title" | "description" | "url" | "author";
+
+export type FeedFilter = {
+  id: string;
+  type: FeedFilterType;
+  field: FeedFilterField | null;
+  keywords: string[];
+  isEnabled: boolean;
+};
+
+export type FeedFilterInput = {
+  type: FeedFilterType;
+  field: FeedFilterField;
+  keywords: string[];
+  isEnabled: boolean;
+};
+
+type FilterPreviewItem = {
+  id: string;
+  title: string | null;
+  canonicalUrl: string | null;
+  url: string | null;
+};
+
+export type FeedFilterPreview = {
+  includedCount: number;
+  excludedCount: number;
+  includedItems: FilterPreviewItem[];
+  excludedItems: Array<FilterPreviewItem & {
+    reason:
+      | { code: "BLACKLIST_MATCH"; type: "blacklist"; field: string; keyword: string }
+      | { code: "WHITELIST_NO_MATCH"; type: "whitelist"; filterIds: string[] };
+  }>;
+};
+
 type ApiEnvelope<T> = {
   data?: T;
   error?: { code?: string; message?: string; details?: Record<string, unknown> };
@@ -76,6 +112,10 @@ function post<T>(url: string, body: unknown, fetcher: typeof fetch): Promise<T> 
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   }, fetcher);
+}
+
+function get<T>(url: string, fetcher: typeof fetch): Promise<T> {
+  return request(url, { method: "GET" }, fetcher);
 }
 
 async function mutate<T>(
@@ -143,4 +183,52 @@ export function requestFeedRefresh(
   fetcher: typeof fetch = fetch,
 ): Promise<{ job: { id: string; status: "QUEUED" }; cooldownSeconds: number; cooldownUntil: string }> {
   return post(`/api/feeds/${encodeURIComponent(feedId)}/refresh`, { workspaceId }, fetcher);
+}
+function filterUrl(feedId: string, filterId?: string): string {
+  return `/api/feeds/${encodeURIComponent(feedId)}/filters${filterId ? `/${encodeURIComponent(filterId)}` : ""}`;
+}
+
+export function listFeedFilters(
+  workspaceId: string,
+  feedId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<FeedFilter[]> {
+  return get(`${filterUrl(feedId)}?workspaceId=${encodeURIComponent(workspaceId)}`, fetcher);
+}
+
+export function createFeedFilter(
+  workspaceId: string,
+  feedId: string,
+  filter: FeedFilterInput,
+  fetcher: typeof fetch = fetch,
+): Promise<FeedFilter> {
+  return post(filterUrl(feedId), { workspaceId, ...filter }, fetcher);
+}
+
+export function updateFeedFilter(
+  workspaceId: string,
+  feedId: string,
+  filterId: string,
+  patch: Partial<FeedFilterInput>,
+  fetcher: typeof fetch = fetch,
+): Promise<FeedFilter> {
+  return mutate(filterUrl(feedId, filterId), "PATCH", { workspaceId, ...patch }, fetcher);
+}
+
+export function deleteFeedFilter(
+  workspaceId: string,
+  feedId: string,
+  filterId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ deleted: true; id: string }> {
+  return mutate(`${filterUrl(feedId, filterId)}?workspaceId=${encodeURIComponent(workspaceId)}`, "DELETE", undefined, fetcher);
+}
+
+export function previewFeedFilter(
+  workspaceId: string,
+  feedId: string,
+  filter: FeedFilterInput,
+  fetcher: typeof fetch = fetch,
+): Promise<FeedFilterPreview> {
+  return post(`/api/feeds/${encodeURIComponent(feedId)}/filters/preview`, { workspaceId, ...filter }, fetcher);
 }

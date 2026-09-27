@@ -37,3 +37,4 @@ Non-critical improvements found during ticket review. Keep MVP tickets authorita
 - Filter API: make feed existence checks and filter mutations one transaction if concurrent feed deletion becomes a supported workflow requiring snapshot-consistent errors.
 - Filter API: authenticate before parsing mutation bodies if unauthenticated callers must always receive authorization errors instead of body-validation errors.
 - Filter API: explicitly reject or map future `FeedFilterType` values in API projections before advanced rule types are exposed through the per-feed endpoints.
+- Filter UI: add browser-level create, preview, toggle, delete, and viewer-role coverage when the project adopts an end-to-end test harness.

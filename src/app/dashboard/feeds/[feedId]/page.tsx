@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { FeedItemTable } from "../../../../components/feed-item-table.tsx";
+import { FeedFilterPanel } from "../../../../components/feed-filter-panel.tsx";
 import { FeedOutputLinks } from "../../../../components/feed-output-links.tsx";
 import { FeedSettingsPanel } from "../../../../components/feed-settings-panel.tsx";
 import { FeedStatusBadge } from "../../../../components/feed-status-badge.tsx";
@@ -87,6 +88,7 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
           <ManualRefreshButton workspaceId={workspaceId} feedId={feed.id} paused={feed.status === "PAUSED"} />
         </section>
       ) : null}
+      <FeedFilterPanel workspaceId={workspaceId} feedId={feed.id} canManage={canManage} />
       <FeedItemTable items={itemsResult?.items ?? []} />
 
       <section className="feed-detail-card" aria-labelledby="refresh-history-heading">
