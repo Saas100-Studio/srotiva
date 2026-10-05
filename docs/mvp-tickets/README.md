@@ -1,4 +1,4 @@
-# Morsel MVP Sprint Ticket Pack
+# Srotiva MVP Sprint Ticket Pack
 
 Use this folder as the implementation queue for the MVP only. Each ticket is in its own Markdown file so an AI coding agent can take one file, implement it, run its tests, and stop for review.
 

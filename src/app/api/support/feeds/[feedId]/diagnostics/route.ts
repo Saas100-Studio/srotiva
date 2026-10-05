@@ -1,6 +1,6 @@
 import { FeedItemStatus, WorkspaceRole } from "@prisma/client";
 
-import { MorselApiError } from "../../../../../../lib/api/errors.ts";
+import { SrotivaApiError } from "../../../../../../lib/api/errors.ts";
 import { requireUser } from "../../../../../../lib/api/request-context.ts";
 import { createRequestId, jsonError, jsonOk } from "../../../../../../lib/api/responses.ts";
 import { loadEnv } from "../../../../../../lib/config/env.ts";
@@ -11,12 +11,12 @@ import { logError } from "../../../../../../lib/logging/logger.ts";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function validateId(value: string | null, name: string): asserts value is string {
-  if (!value || !UUID.test(value)) throw new MorselApiError(422, "VALIDATION_ERROR", `${name} must be a UUID.`);
+  if (!value || !UUID.test(value)) throw new SrotivaApiError(422, "VALIDATION_ERROR", `${name} must be a UUID.`);
 }
 
 function routeError(error: unknown): unknown {
-  if (error instanceof MorselApiError && error.code === "UNAUTHENTICATED") {
-    return new MorselApiError(401, "UNAUTHORIZED", "Authentication is required.");
+  if (error instanceof SrotivaApiError && error.code === "UNAUTHENTICATED") {
+    return new SrotivaApiError(401, "UNAUTHORIZED", "Authentication is required.");
   }
   return error;
 }
@@ -32,7 +32,7 @@ export async function handleFeedDiagnosticsGet(request: Request, feedId: string)
     const user = await requireUser(request);
     const membership = await findActiveWorkspaceMembership({ userId: user.id, workspaceId });
     if (membership?.role !== WorkspaceRole.SUPPORT) {
-      throw new MorselApiError(403, "FORBIDDEN", "Support access is required.");
+      throw new SrotivaApiError(403, "FORBIDDEN", "Support access is required.");
     }
 
     const db = getDb();
@@ -51,7 +51,7 @@ export async function handleFeedDiagnosticsGet(request: Request, feedId: string)
         failureCount: true,
       },
     });
-    if (!feed) throw new MorselApiError(404, "FEED_NOT_FOUND", "The feed was not found.");
+    if (!feed) throw new SrotivaApiError(404, "FEED_NOT_FOUND", "The feed was not found.");
 
     const [lastRefreshJob, errorLogs, groupedCounts] = await Promise.all([
       db.feedRefreshJob.findFirst({

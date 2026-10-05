@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { deleteFeed, updateFeedStatus } from "../lib/client/api-client.ts";
+import { deleteFeed, rotatePrivateFeedToken, updateFeedStatus } from "../lib/client/api-client.ts";
 
 async function source(relativePath: string): Promise<string> {
   return readFile(new URL(relativePath, import.meta.url), "utf8");
@@ -20,6 +20,7 @@ test("feed status and delete actions call the tenant-scoped API", async () => {
   }) as typeof fetch;
 
   await updateFeedStatus("workspace id", "feed/id", "PAUSED", fetcher);
+  await rotatePrivateFeedToken("workspace id", "feed/id", fetcher);
   await deleteFeed("workspace id", "feed/id", fetcher);
 
   assert.deepEqual(requests, [
@@ -27,6 +28,11 @@ test("feed status and delete actions call the tenant-scoped API", async () => {
       url: "/api/feeds/feed%2Fid?workspaceId=workspace%20id",
       method: "PATCH",
       body: JSON.stringify({ status: "PAUSED" }),
+    },
+    {
+      url: "/api/feeds/feed%2Fid/token",
+      method: "POST",
+      body: JSON.stringify({ workspaceId: "workspace id" }),
     },
     {
       url: "/api/feeds/feed%2Fid?workspaceId=workspace%20id",
@@ -44,7 +50,7 @@ test("detail page stays tenant-scoped and renders feed outputs, items, and refre
   assert.match(page, /listFeedItems\(workspaceId, feedId, 25\)/);
   assert.match(page, /listRecentRefreshJobs\(workspaceId, feedId\)/);
   assert.match(page, /initializePrivateFeedToken\(workspaceId, feed\.id/);
-  assert.match(page, /<FeedOutputLinks outputUrls=/);
+  assert.match(page, /<FeedOutputLinks tokenAvailable=/);
   assert.match(page, /<FeedItemTable items=/);
   assert.match(page, /Last refresh/);
   assert.match(page, /Next refresh/);
@@ -79,4 +85,8 @@ test("settings support pause, resume, and confirmed deletion", async () => {
   assert.match(settings, /window\.confirm/);
   assert.match(settings, /await deleteFeed\(workspaceId, feedId\)/);
   assert.match(settings, /router\.push\("\/dashboard"\)/);
+  assert.match(settings, /Rotate access token/);
+  assert.match(settings, /Every existing private output URL will stop working immediately/);
+  assert.match(settings, /rotatePrivateFeedToken\(workspaceId, feedId\)/);
+  assert.match(settings, /they will not be shown again/);
 });

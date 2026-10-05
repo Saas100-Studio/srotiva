@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import {
   fetchDocument,
   getCrawlerUserAgent,
@@ -43,14 +43,14 @@ export type DiscoverFeedPreviewInput = {
   fetchOptions?: FetchDocumentOptions;
 };
 
-function stableError(error: unknown): MorselApiError {
-  if (error instanceof MorselApiError) {
+function stableError(error: unknown): SrotivaApiError {
+  if (error instanceof SrotivaApiError) {
     if (error.code === "INVALID_URL") return error;
     if (["UNSAFE_URL", "UNSUPPORTED_PROTOCOL", "UNSAFE_PORT"].includes(error.code)) {
-      return new MorselApiError(422, "UNSAFE_URL", "The URL is not safe to fetch.", error.details);
+      return new SrotivaApiError(422, "UNSAFE_URL", "The URL is not safe to fetch.", error.details);
     }
     if (["NO_ITEMS_EXTRACTED", "INVALID_FEED"].includes(error.code)) {
-      return new MorselApiError(
+      return new SrotivaApiError(
         422,
         "NO_FEED_CANDIDATE",
         "No usable native feed or repeated webpage item pattern was found.",
@@ -60,11 +60,11 @@ function stableError(error: unknown): MorselApiError {
     if (error.code === "NO_FEED_CANDIDATE") return error;
   }
 
-  return new MorselApiError(
+  return new SrotivaApiError(
     502,
     "FETCH_FAILED",
     "The source could not be fetched.",
-    error instanceof MorselApiError ? { cause: error.code } : {},
+    error instanceof SrotivaApiError ? { cause: error.code } : {},
   );
 }
 
@@ -110,7 +110,7 @@ export async function discoverFeedPreview(
         contentType: page.contentType,
       }));
     } catch (error) {
-      if (!(error instanceof MorselApiError) || error.code !== "INVALID_FEED") throw error;
+      if (!(error instanceof SrotivaApiError) || error.code !== "INVALID_FEED") throw error;
     }
 
     const candidates = await (dependencies.discoverNativeFeeds ?? discoverNativeFeeds)({
@@ -126,7 +126,7 @@ export async function discoverFeedPreview(
           contentType: document.contentType,
         }));
       } catch (error) {
-        if (!(error instanceof MorselApiError)) throw error;
+        if (!(error instanceof SrotivaApiError)) throw error;
       }
     }
 

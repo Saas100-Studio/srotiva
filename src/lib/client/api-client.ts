@@ -91,7 +91,7 @@ async function request<T>(url: string, init: RequestInit, fetcher: typeof fetch)
   try {
     response = await fetcher(url, init);
   } catch {
-    throw new ClientApiError("NETWORK_ERROR", "Unable to reach Morsel. Please try again.");
+    throw new ClientApiError("NETWORK_ERROR", "Unable to reach Srotiva. Please try again.");
   }
 
   const result = await response.json().catch(() => ({})) as ApiEnvelope<T>;
@@ -177,6 +177,14 @@ export function deleteFeed(
   );
 }
 
+export function rotatePrivateFeedToken(
+  workspaceId: string,
+  feedId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ outputUrls: { rss: string; json: string; csv: string } }> {
+  return post(`/api/feeds/${encodeURIComponent(feedId)}/token`, { workspaceId }, fetcher);
+}
+
 export function requestFeedRefresh(
   workspaceId: string,
   feedId: string,
@@ -231,4 +239,20 @@ export function previewFeedFilter(
   fetcher: typeof fetch = fetch,
 ): Promise<FeedFilterPreview> {
   return post(`/api/feeds/${encodeURIComponent(feedId)}/filters/preview`, { workspaceId, ...filter }, fetcher);
+}
+
+export function changeAccountPassword(
+  currentPassword: string,
+  newPassword: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ changed: true }> {
+  return post("/api/account/password", { currentPassword, newPassword }, fetcher);
+}
+
+export function deleteAccount(
+  password: string,
+  confirmation: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ deleted: true }> {
+  return mutate("/api/account", "DELETE", { password, confirmation }, fetcher);
 }

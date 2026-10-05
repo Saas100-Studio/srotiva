@@ -23,10 +23,10 @@ test("filter CRUD is tenant-safe, role-safe, and validates basic keyword rules",
   assert.ok(process.env.DATABASE_URL);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const owner = await createUser({ email: `filters-owner-${suffix}@morsel.test`, passwordHash: "hash" });
-  const editor = await createUser({ email: `filters-editor-${suffix}@morsel.test`, passwordHash: "hash" });
-  const viewer = await createUser({ email: `filters-viewer-${suffix}@morsel.test`, passwordHash: "hash" });
-  const outsider = await createUser({ email: `filters-other-${suffix}@morsel.test`, passwordHash: "hash" });
+  const owner = await createUser({ email: `filters-owner-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const editor = await createUser({ email: `filters-editor-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const viewer = await createUser({ email: `filters-viewer-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const outsider = await createUser({ email: `filters-other-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: owner.id, name: "Filters", slug: `filters-${suffix}` });
   const otherWorkspace = await createWorkspaceWithOwner({ userId: outsider.id, name: "Other", slug: `filters-other-${suffix}` });
   await db.workspaceMember.createMany({ data: [

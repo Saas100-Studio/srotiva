@@ -73,7 +73,7 @@ None.
 
 ## Acceptance criteria
 
-- Every unsafe URL test fails with `MorselApiError`.
+- Every unsafe URL test fails with `SrotivaApiError`.
 - Error codes are stable and documented in test names.
 - No HTTP request is made by this module.
 - `bun run test` passes.

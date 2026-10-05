@@ -37,9 +37,9 @@ test("feed save and management APIs preserve tenant boundaries and soft-delete r
   assert.ok(process.env.SESSION_SECRET);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `save-${suffix}@morsel.test`, passwordHash: "hash" });
-  const other = await createUser({ email: `save-other-${suffix}@morsel.test`, passwordHash: "hash" });
-  const viewer = await createUser({ email: `save-viewer-${suffix}@morsel.test`, passwordHash: "hash" });
+  const user = await createUser({ email: `save-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const other = await createUser({ email: `save-other-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const viewer = await createUser({ email: `save-viewer-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: user.id, name: "Save", slug: `save-${suffix}` });
   const otherWorkspace = await createWorkspaceWithOwner({ userId: other.id, name: "Other", slug: `save-other-${suffix}` });
   const cookie = createSessionCookie(user.id, { secure: false });

@@ -11,7 +11,7 @@ import { ManualRefreshButton } from "../../../../components/manual-refresh-butto
 import { getOptionalCurrentUserFromCookieHeader } from "../../../../lib/auth/current-user.ts";
 import { requireDashboardUser } from "../../../../lib/auth/dashboard.ts";
 import { loadEnv } from "../../../../lib/config/env.ts";
-import { findFeedDetail, initializePrivateFeedToken, listFeedItems } from "../../../../lib/db/repositories/feeds.ts";
+import { findFeedDetail, initializePrivateFeedToken, listFeedItems, privateFeedTokenHashMatches } from "../../../../lib/db/repositories/feeds.ts";
 import { listRecentRefreshJobs } from "../../../../lib/db/repositories/jobs.ts";
 import { createPrivateFeedToken, hashPrivateFeedToken } from "../../../../lib/feed/feed-output-token.ts";
 import { getFeedHealth } from "../../../../lib/feed/feed-health.ts";
@@ -35,8 +35,11 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
     listFeedItems(workspaceId, feedId, 25),
     listRecentRefreshJobs(workspaceId, feedId),
   ]);
-  const privateToken = feed.visibility === FeedVisibility.PRIVATE ? createPrivateFeedToken(feed.id) : null;
-  if (privateToken) await initializePrivateFeedToken(workspaceId, feed.id, hashPrivateFeedToken(privateToken));
+  const candidate = feed.visibility === FeedVisibility.PRIVATE ? createPrivateFeedToken(feed.id) : null;
+  if (candidate) await initializePrivateFeedToken(workspaceId, feed.id, hashPrivateFeedToken(candidate));
+  const privateToken = candidate && await privateFeedTokenHashMatches(workspaceId, feed.id, hashPrivateFeedToken(candidate))
+    ? candidate
+    : null;
   const suffix = privateToken ? `?token=${encodeURIComponent(privateToken)}` : "";
   const outputBase = `${loadEnv().APP_URL}/f/${feed.outputSlug}`;
   const canManage = currentUser.activeWorkspace.role === "OWNER" || currentUser.activeWorkspace.role === "EDITOR";
@@ -77,7 +80,7 @@ export default async function FeedDetailPage({ params }: { params: Promise<{ fee
         />
       </div>
 
-      <FeedOutputLinks outputUrls={{
+      <FeedOutputLinks tokenAvailable={feed.visibility !== FeedVisibility.PRIVATE || privateToken !== null} outputUrls={{
         rss: `${outputBase}/rss${suffix}`,
         json: `${outputBase}/json${suffix}`,
         csv: `${outputBase}/csv${suffix}`,

@@ -3,6 +3,7 @@ import test from "node:test";
 import { XMLValidator } from "fast-xml-parser";
 
 import { handleFeedGet } from "../app/api/feeds/[feedId]/route.ts";
+import { handlePrivateFeedTokenPost } from "../app/api/feeds/[feedId]/token/route.ts";
 import { POST as save } from "../app/api/feeds/route.ts";
 import { GET as getCsv } from "../app/f/[slug]/csv/route.ts";
 import { GET as getJson } from "../app/f/[slug]/json/route.ts";
@@ -11,6 +12,7 @@ import { createSessionCookie } from "../lib/auth/session.ts";
 import { getDb } from "../lib/db/client.ts";
 import { createUser } from "../lib/db/repositories/users.ts";
 import { createWorkspaceWithOwner } from "../lib/db/repositories/workspaces.ts";
+import { hashPrivateFeedToken } from "../lib/feed/feed-output-token.ts";
 
 function route(get: typeof getRss, slug: string, token?: string) {
   const query = token === undefined ? "" : `?token=${encodeURIComponent(token)}`;
@@ -23,9 +25,12 @@ test("public output routes enforce access and render one bounded active item set
   assert.ok(process.env.SESSION_SECRET);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `outputs-${suffix}@morsel.test`, passwordHash: "hash" });
+  const user = await createUser({ email: `outputs-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const viewer = await createUser({ email: `outputs-viewer-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: user.id, name: "Outputs", slug: `outputs-${suffix}` });
   const cookie = createSessionCookie(user.id, { secure: false });
+  const viewerCookie = createSessionCookie(viewer.id, { secure: false });
+  await db.workspaceMember.create({ data: { workspaceId: workspace.id, userId: viewer.id, role: "VIEWER", joinedAt: new Date() } });
 
   try {
     const response = await save(new Request("http://localhost/api/feeds", {
@@ -72,6 +77,7 @@ test("public output routes enforce access and render one bounded active item set
     assert.equal(await missing.text(), await bad.text());
     assert.equal(await route(getRss, outputSlug).then((value) => value.text()), await absent.text());
     assert.equal(missing.headers.get("cache-control"), "private, no-store");
+    assert.equal(missing.headers.get("x-robots-tag"), "noindex, nofollow, nosnippet");
 
     await db.feed.update({ where: { id }, data: { publicTokenHash: "malformed" } });
     assert.equal((await route(getRss, outputSlug, privateToken)).status, 404);
@@ -80,6 +86,29 @@ test("public output routes enforce access and render one bounded active item set
     assert.equal(privateRss.status, 200);
     assert.equal(privateRss.headers.get("cache-control"), "private, no-store");
     assert.doesNotMatch(await privateRss.text(), /token=/u);
+
+    const rotationRequest = (rotationCookie: string) => new Request(`http://localhost/api/feeds/${id}/token`, {
+      method: "POST",
+      headers: { cookie: rotationCookie, "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace.id }),
+    });
+    assert.equal((await handlePrivateFeedTokenPost(rotationRequest(viewerCookie), id)).status, 403);
+    const rotation = await handlePrivateFeedTokenPost(rotationRequest(cookie), id);
+    const rotationBody = await rotation.json() as { data: { outputUrls: { rss: string; json: string; csv: string } } };
+    const rotatedToken = new URL(rotationBody.data.outputUrls.rss).searchParams.get("token");
+    assert.equal(rotation.status, 200);
+    assert.equal(rotation.headers.get("cache-control"), "private, no-store");
+    assert.match(rotatedToken ?? "", /^[\w-]{43}$/u);
+    assert.equal((await db.feed.findUniqueOrThrow({ where: { id } })).publicTokenHash, hashPrivateFeedToken(rotatedToken ?? ""));
+    assert.equal((await route(getRss, outputSlug, privateToken)).status, 404);
+    assert.equal((await route(getRss, outputSlug, rotatedToken ?? "")).status, 200);
+    const detailAfterRotation = await handleFeedGet(
+      new Request(`http://localhost/api/feeds/${id}?workspaceId=${workspace.id}`, { headers: { cookie } }),
+      id,
+    );
+    const detailAfterRotationBody = await detailAfterRotation.json() as { data: { privateToken?: string; outputUrls: { rss: string } } };
+    assert.equal(detailAfterRotationBody.data.privateToken, undefined);
+    assert.doesNotMatch(detailAfterRotationBody.data.outputUrls.rss, /token=/u);
 
     await db.feed.update({ where: { id }, data: { visibility: "PUBLIC" } });
     const [rss, json, csv] = await Promise.all([
@@ -93,6 +122,7 @@ test("public output routes enforce access and render one bounded active item set
     for (const output of [rss, json, csv]) {
       assert.equal(output.status, 200);
       assert.equal(output.headers.get("cache-control"), "public, max-age=60, stale-while-revalidate=300");
+      assert.equal(output.headers.get("x-robots-tag"), "noindex, nofollow, nosnippet");
     }
     const rssText = await rss.text();
     const jsonBody = await json.json() as { items: Array<{ fingerprint: string; title: string }> };
@@ -148,6 +178,15 @@ test("public output routes enforce access and render one bounded active item set
     assert.equal((await route(getCsv, outputSlug)).status, 404);
   } finally {
     await db.workspace.deleteMany({ where: { id: workspace.id } });
-    await db.user.deleteMany({ where: { id: user.id } });
+    await db.user.deleteMany({ where: { id: { in: [user.id, viewer.id] } } });
   }
+});
+
+test("rotated private feed tokens are random and fixed-length", async () => {
+  const { createRandomPrivateFeedToken } = await import("../lib/feed/feed-output-token.ts");
+  const first = createRandomPrivateFeedToken();
+  const second = createRandomPrivateFeedToken();
+  assert.match(first, /^[\w-]{43}$/u);
+  assert.match(second, /^[\w-]{43}$/u);
+  assert.notEqual(first, second);
 });

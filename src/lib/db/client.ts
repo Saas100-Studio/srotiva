@@ -1,13 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as typeof globalThis & {
-  morselDb?: PrismaClient;
+  srotivaDb?: PrismaClient;
 };
 
-const db = globalForPrisma.morselDb ?? new PrismaClient();
+const db = globalForPrisma.srotivaDb ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.morselDb = db;
+  globalForPrisma.srotivaDb = db;
 }
 
 export function getDb(): PrismaClient {

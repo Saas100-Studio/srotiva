@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { RefreshJobStatus, RefreshTrigger, type FeedRefreshJob } from "@prisma/client";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { processNextRefreshJob } from "../workers/refresh-worker.ts";
 
 function job(): FeedRefreshJob {
@@ -33,7 +33,9 @@ function job(): FeedRefreshJob {
 test("one-shot worker completes one claimed job", async () => {
   const claimed = job();
   let completed = false;
+  let reclaimed = false;
   const result = await processNextRefreshJob("worker-test", {
+    reclaimStaleRefreshJobs: async () => { reclaimed = true; return 1; },
     claimNextRefreshJob: async () => claimed,
     refreshFeed: async () => ({ itemsFound: 2, itemsNew: 1, itemsChanged: 0 }),
     completeRefreshJob: async ({ workerId }) => {
@@ -42,6 +44,7 @@ test("one-shot worker completes one claimed job", async () => {
       return { ...claimed, status: RefreshJobStatus.SUCCEEDED };
     },
   });
+  assert.equal(reclaimed, true);
   assert.equal(completed, true);
   assert.equal(result?.status, "succeeded");
 });
@@ -50,8 +53,9 @@ test("one-shot worker records a failed claimed job", async () => {
   const claimed = job();
   let failureCode: string | undefined;
   const result = await processNextRefreshJob("worker-test", {
+    reclaimStaleRefreshJobs: async () => 0,
     claimNextRefreshJob: async () => claimed,
-    refreshFeed: async () => { throw new MorselApiError(502, "FETCH_TIMEOUT", "Timed out."); },
+    refreshFeed: async () => { throw new SrotivaApiError(502, "FETCH_TIMEOUT", "Timed out."); },
     failRefreshJob: async ({ error, workerId }) => {
       assert.equal(workerId, "worker-test");
       failureCode = error.code;
@@ -66,6 +70,7 @@ test("completion write failures are not converted into refresh failures", async 
   const claimed = job();
   let failed = false;
   await assert.rejects(processNextRefreshJob("worker-test", {
+    reclaimStaleRefreshJobs: async () => 0,
     claimNextRefreshJob: async () => claimed,
     refreshFeed: async () => ({ itemsFound: 1, itemsNew: 1, itemsChanged: 0 }),
     completeRefreshJob: async () => { throw new Error("completion unavailable"); },
@@ -79,6 +84,7 @@ test("completion write failures are not converted into refresh failures", async 
 
 test("one-shot worker exits cleanly when the queue is empty", async () => {
   assert.equal(await processNextRefreshJob("worker-test", {
+    reclaimStaleRefreshJobs: async () => 0,
     claimNextRefreshJob: async () => null,
   }), null);
 });

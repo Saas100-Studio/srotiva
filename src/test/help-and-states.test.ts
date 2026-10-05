@@ -6,12 +6,52 @@ async function source(relativePath: string): Promise<string> {
   return readFile(new URL(relativePath, import.meta.url), "utf8");
 }
 
-test("help index links to every MVP help article", async () => {
+test("help index links to every production help article and contact", async () => {
   const help = await source("../app/help/page.tsx");
-  for (const href of ["/help/create-a-feed", "/help/output-formats", "/help/troubleshooting"]) {
+  for (const href of [
+    "/help/create-a-feed",
+    "/help/output-formats",
+    "/help/refreshes-and-history",
+    "/help/filters",
+    "/help/private-feeds",
+    "/help/accounts-and-limits",
+    "/help/troubleshooting",
+    "/help/crawler-behavior",
+    "/contact",
+  ]) {
     assert.match(help, new RegExp(href));
   }
   assert.doesNotMatch(help, /webhooks|widgets|AI summaries|billing/i);
+});
+
+test("contact page publishes support coverage without requesting secrets", async () => {
+  const contact = await source("../app/contact/page.tsx");
+  assert.match(contact, /gouresh5901@gmail\.com/);
+  assert.match(contact, /Indian business days during IST working hours/);
+  assert.match(contact, /Do not send your password, session cookie, or a private feed access token/);
+  assert.match(contact, /Security report/);
+  assert.match(contact, /Takedown request/);
+  assert.doesNotMatch(contact, /within \d+ (?:hour|day)s?/i);
+});
+
+test("help content matches implemented refresh, filter, private-feed, and account behavior", async () => {
+  const [refreshes, filters, privateFeeds, accounts, crawler] = await Promise.all([
+    source("../app/help/refreshes-and-history/page.tsx"),
+    source("../app/help/filters/page.tsx"),
+    source("../app/help/private-feeds/page.tsx"),
+    source("../app/help/accounts-and-limits/page.tsx"),
+    source("../app/help/crawler-behavior/page.tsx"),
+  ]);
+  assert.match(refreshes, /queued rather than fetched in the browser/);
+  assert.match(refreshes, /previously published items available/);
+  assert.match(filters, /Blacklist matches take precedence/);
+  assert.match(filters, /case-insensitive substring matching/);
+  assert.match(privateFeeds, /Every old private output URL stops working immediately/);
+  assert.match(accounts, /25 feeds and 10,000 feed items/);
+  assert.match(accounts, /1,000 manual refreshes per UTC calendar month/);
+  assert.match(crawler, /SrotivaBot/);
+  assert.match(crawler, /robots\.txt/);
+  assert.match(crawler, /does not bypass logins, paywalls, CAPTCHAs/);
 });
 
 test("feed creation errors retain and display the API request ID", async () => {

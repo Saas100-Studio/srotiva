@@ -46,6 +46,24 @@ test("dashboard renders computed feed health badges", async () => {
   assert.match(page, /<FeedStatusBadge status=/);
 });
 
+test("dashboard uses bounded server-side search and pagination", async () => {
+  const [page, repository] = await Promise.all([
+    source("../app/dashboard/page.tsx"),
+    source("../lib/db/repositories/feeds.ts"),
+  ]);
+
+  assert.match(page, /listDashboardFeeds\(currentUser\.activeWorkspace\.id/);
+  assert.match(page, /name="q"/);
+  assert.match(page, /<span>Search feeds<\/span>/);
+  assert.match(page, /hasPreviousPage/);
+  assert.match(page, /hasNextPage/);
+  assert.match(page, /result\.page > 1 && result\.feeds\.length === 0/);
+  assert.doesNotMatch(page, /feeds\.slice\(/);
+  assert.match(repository, /DASHBOARD_FEED_PAGE_SIZE \+ 1/);
+  assert.match(repository, /contains: normalizedQuery/);
+  assert.match(repository, /skip: \(normalizedPage - 1\) \* DASHBOARD_FEED_PAGE_SIZE/);
+});
+
 test("homepage includes signup and login links without unsupported claims", async () => {
   const home = await source("../app/page.tsx");
 
@@ -65,4 +83,19 @@ test("app shell contains the required navigation", async () => {
   ]) {
     assert.match(shell, new RegExp(`\\["${label}", "${href}"\\]`));
   }
+});
+
+test("application provides recovery experiences for missing and failed routes", async () => {
+  const [notFound, routeError, globalError] = await Promise.all([
+    source("../app/not-found.tsx"),
+    source("../app/dashboard/error.tsx"),
+    source("../app/global-error.tsx"),
+  ]);
+
+  assert.match(notFound, /Page not found/);
+  assert.match(notFound, /href="\/dashboard"/);
+  assert.match(routeError, /onClick=\{reset\}/);
+  assert.match(routeError, /Your data has not been changed/);
+  assert.match(globalError, /<html lang="en">/);
+  assert.match(globalError, /onClick=\{reset\}/);
 });

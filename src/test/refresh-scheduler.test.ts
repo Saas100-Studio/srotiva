@@ -25,7 +25,7 @@ test("scheduler enqueues only due refreshable feeds without duplicate job storms
   assert.ok(process.env.DATABASE_URL);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `scheduler-${suffix}@morsel.test`, passwordHash: "test" });
+  const user = await createUser({ email: `scheduler-${suffix}@srotiva.test`, passwordHash: "test" });
   const workspace = await createWorkspaceWithOwner({
     userId: user.id,
     name: "Scheduler Test",

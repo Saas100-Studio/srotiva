@@ -1,6 +1,6 @@
 import { FeedSourceType, FeedStatus, type RefreshTrigger } from "@prisma/client";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import {
   fetchDocument,
   getCrawlerUserAgent,
@@ -46,7 +46,7 @@ function safeErrorDetails(details: Record<string, unknown>): Record<string, unkn
 }
 
 function refreshError(error: unknown): { code: string; message: string; details: Record<string, unknown> } {
-  if (error instanceof MorselApiError) {
+  if (error instanceof SrotivaApiError) {
     return { code: error.code, message: error.message, details: safeErrorDetails(error.details) };
   }
   return {
@@ -69,14 +69,14 @@ export async function refreshFeed(
   try {
     const feed = await findFeedForRefresh(input.feedId);
     if (!feed) {
-      throw new MorselApiError(404, "FEED_NOT_FOUND", "The feed could not be refreshed.");
+      throw new SrotivaApiError(404, "FEED_NOT_FOUND", "The feed could not be refreshed.");
     }
     if (feed.status !== FeedStatus.ACTIVE &&
         feed.status !== FeedStatus.DEGRADED && feed.status !== FeedStatus.FAILED) {
-      throw new MorselApiError(409, "FEED_NOT_REFRESHABLE", "The feed is not active for refresh.");
+      throw new SrotivaApiError(409, "FEED_NOT_REFRESHABLE", "The feed is not active for refresh.");
     }
     if (feed.sourceType !== FeedSourceType.NATIVE && feed.sourceType !== FeedSourceType.WEBPAGE) {
-      throw new MorselApiError(422, "UNSUPPORTED_SOURCE_TYPE", "This feed source type is not refreshable.");
+      throw new SrotivaApiError(422, "UNSUPPORTED_SOURCE_TYPE", "This feed source type is not refreshable.");
     }
 
     const fetchOptions = input.fetchOptions ?? {};

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { isUnsafeIpAddress } from "../lib/crawler/ip-ranges.ts";
 import {
   assertSafeRedirectUrl,
@@ -51,7 +51,7 @@ async function rejectsWithCode(
     ? Promise.resolve().then(promise)
     : promise;
   await assert.rejects(operation, (error: unknown) => {
-    assert.ok(error instanceof MorselApiError);
+    assert.ok(error instanceof SrotivaApiError);
     assert.equal(error.code, code);
     return true;
   });

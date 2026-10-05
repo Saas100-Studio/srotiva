@@ -72,7 +72,7 @@ None.
 
 - All network access flows through URL safety checks.
 - Fetcher returns structured data for 2xx responses.
-- Fetcher throws `MorselApiError` with stable codes for timeout, large body, unsafe redirect, and robots disallow.
+- Fetcher throws `SrotivaApiError` with stable codes for timeout, large body, unsafe redirect, and robots disallow.
 - `bun run test` passes.
 - `bun run check` passes.
 

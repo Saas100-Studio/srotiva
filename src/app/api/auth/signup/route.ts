@@ -7,10 +7,12 @@ import {
 import { createSessionCookie } from "../../../../lib/auth/session.ts";
 import { logError } from "../../../../lib/logging/logger.ts";
 import { clientIp, enforceRateLimit } from "../../../../lib/security/rate-limit.ts";
+import { assertTrustedMutationOrigin } from "../../../../lib/security/request-origin.ts";
 
 export async function POST(request: Request): Promise<Response> {
   const requestId = createRequestId();
   try {
+    assertTrustedMutationOrigin(request);
     enforceRateLimit({
       bucket: "signup",
       key: clientIp(request),

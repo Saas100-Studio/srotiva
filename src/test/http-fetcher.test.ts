@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import {
   fetchDocument,
   type FetchImplementation,
@@ -14,16 +14,16 @@ const baseOptions = {
   timeoutMs: 1_000,
   maxBytes: 1_000,
   maxRedirects: 2,
-  userAgent: "MorselBot/1.0 (+https://morsel.example/bot)",
+  userAgent: "SrotivaBot/1.0 (+https://srotiva.example/bot)",
 };
 
 async function rejectsWithCode(
   operation: Promise<unknown>,
   code: string,
-): Promise<MorselApiError> {
-  let captured: MorselApiError | undefined;
+): Promise<SrotivaApiError> {
+  let captured: SrotivaApiError | undefined;
   await assert.rejects(operation, (error: unknown) => {
-    assert.ok(error instanceof MorselApiError);
+    assert.ok(error instanceof SrotivaApiError);
     assert.equal(error.code, code);
     captured = error;
     return true;

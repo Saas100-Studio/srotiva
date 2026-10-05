@@ -82,10 +82,11 @@ test("feed creation maps unsafe and empty-source errors to plain language", () =
 });
 
 test("creation form guards empty discovery, renders preview state, and redirects after save", async () => {
-  const [form, list, page] = await Promise.all([
+  const [form, list, page, styles] = await Promise.all([
     source("../components/feed-create-form.tsx"),
     source("../components/feed-preview-list.tsx"),
     source("../app/dashboard/feeds/new/page.tsx"),
+    source("../app/globals.css"),
   ]);
 
   assert.match(form, /if \(!url\)/);
@@ -97,4 +98,6 @@ test("creation form guards empty discovery, renders preview state, and redirects
   assert.match(list, /Items extracted from webpage/);
   assert.match(list, /item\.title/);
   assert.match(page, /FeedCreateForm workspaceId=\{currentUser\.activeWorkspace\.id\}/);
+  assert.match(styles, /\.feed-create-page \{[^}]*max-width: 820px;[^}]*min-width: 0;/s);
+  assert.match(styles, /\.feed-preview__items p \{[^}]*overflow-wrap: anywhere;/s);
 });

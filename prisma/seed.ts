@@ -6,11 +6,11 @@ const db = getDb();
 
 async function seed(): Promise<void> {
   const user = await db.user.upsert({
-    where: { email: "developer@morsel.local" },
-    update: { name: "Morsel Developer" },
+    where: { email: "developer@srotiva.local" },
+    update: { name: "Srotiva Developer" },
     create: {
-      email: "developer@morsel.local",
-      name: "Morsel Developer",
+      email: "developer@srotiva.local",
+      name: "Srotiva Developer",
       passwordHash: null,
     },
   });

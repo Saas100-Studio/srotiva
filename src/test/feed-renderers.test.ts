@@ -24,7 +24,7 @@ const item: NativeFeedItem = {
 };
 
 const feed = {
-  feedTitle: "Morsel & Friends",
+  feedTitle: "Srotiva & Friends",
   feedDescription: "A <useful> feed",
   siteUrl: "https://example.com/",
 };
@@ -36,7 +36,7 @@ test("renders deterministic RSS with required fields and escaped XML", () => {
   assert.equal(output, renderRssFeed(input));
   assert.equal(XMLValidator.validate(output), true);
   assert.match(output, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-  assert.match(output, /<title>Morsel &amp; Friends<\/title>/);
+  assert.match(output, /<title>Srotiva &amp; Friends<\/title>/);
   assert.match(output, /<title>One &lt;item&gt; &amp; more<\/title>/);
   assert.match(output, /<link>https:\/\/example\.com\/posts\/1\?a=1&amp;b=2<\/link>/);
   assert.match(output, /<guid isPermaLink="false">source-1<\/guid>/);

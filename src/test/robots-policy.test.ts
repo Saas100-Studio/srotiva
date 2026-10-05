@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import type { FetchImplementation } from "../lib/crawler/http-fetcher.ts";
 import {
   checkRobotsAllowed,
@@ -10,7 +10,7 @@ import {
 import type { DnsResolver } from "../lib/crawler/url-safety.ts";
 
 const publicLookup: DnsResolver = async () => ["93.184.216.34"];
-const userAgent = "MorselBot/1.0 (+https://morsel.example/bot)";
+const userAgent = "SrotivaBot/1.0 (+https://srotiva.example/bot)";
 
 function options(fetchImpl: FetchImplementation, hostname: string) {
   return {
@@ -40,14 +40,14 @@ test("allows a path when robots has no matching disallow", async () => {
 test("blocks a path disallowed for the configured crawler", async () => {
   const fetchImpl: FetchImplementation = async () =>
     new Response(
-      "User-agent: MorselBot\nDisallow: /articles\n\n" +
+      "User-agent: SrotivaBot\nDisallow: /articles\n\n" +
         "User-agent: *\nAllow: /\n",
     );
 
   await assert.rejects(
     checkRobotsAllowed(options(fetchImpl, "blocked.example")),
     (error: unknown) => {
-      assert.ok(error instanceof MorselApiError);
+      assert.ok(error instanceof SrotivaApiError);
       assert.equal(error.code, "ROBOTS_DISALLOWED");
       assert.equal(error.status, 403);
       return true;
@@ -58,14 +58,14 @@ test("blocks a path disallowed for the configured crawler", async () => {
 test("does not apply a prefix-matching crawler group", async () => {
   const fetchImpl: FetchImplementation = async () =>
     new Response(
-      "User-agent: Morsel\nAllow: /articles\n\n" +
+      "User-agent: Srotiva\nAllow: /articles\n\n" +
         "User-agent: *\nDisallow: /articles\n",
     );
 
   await assert.rejects(
     checkRobotsAllowed(options(fetchImpl, "exact-agent.example")),
     (error: unknown) => {
-      assert.ok(error instanceof MorselApiError);
+      assert.ok(error instanceof SrotivaApiError);
       assert.equal(error.code, "ROBOTS_DISALLOWED");
       return true;
     },

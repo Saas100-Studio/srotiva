@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+
+export const metadata: Metadata = {
+  title: "Legal",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 const legalLinks = [
   ["Terms", "/legal/terms"],
@@ -12,7 +18,7 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
   return (
     <main className="help-page">
       <header className="help-header">
-        <Link className="brand" href="/">Morsel</Link>
+        <Link className="brand" href="/">Srotiva</Link>
         <Link href="/help">Help</Link>
       </header>
       <div className="help-content">

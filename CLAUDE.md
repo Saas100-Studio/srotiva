@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Morsel is a Next.js SaaS that turns websites and native RSS/Atom sources into reliable RSS, JSON, and CSV feeds. Treat this repository as a production product, not a demo sandbox. The codebase is currently pre-alpha and under active MVP construction — see "Where things stand" below before assuming a feature exists.
+Srotiva is a Next.js SaaS that turns websites and native RSS/Atom sources into reliable RSS, JSON, and CSV feeds. Treat this repository as a production product, not a demo sandbox. The codebase is currently pre-alpha and under active MVP construction — see "Where things stand" below before assuming a feature exists.
 
 Detailed product scope lives in `docs/rss-saas-product-requirements.md`; implementation work is broken into tickets under `docs/mvp-tickets/`. `AGENTS.md` at the repo root is the canonical compact agent guide — read it, since it contains the authoritative MVP scope boundary, security rules, and workflow rules and is kept in sync with this file's intent.
 
@@ -28,7 +28,7 @@ Some tests (e.g. `src/test/db-schema.test.ts`) require a real, migrated PostgreS
 
 - `src/app/` — Next.js App Router routes and pages.
 - `src/components/` — React UI components.
-- `src/lib/api/` — shared API primitives: `MorselApiError` (typed error with `status`/`code`/`details`) and `jsonOk`/`jsonError` response helpers that wrap every route response in `{ data, requestId }` or `{ error, requestId }`, with `x-request-id` set on every response. Route handlers should throw `MorselApiError` and let a shared catch path call `jsonError`, rather than hand-rolling error responses.
+- `src/lib/api/` — shared API primitives: `SrotivaApiError` (typed error with `status`/`code`/`details`) and `jsonOk`/`jsonError` response helpers that wrap every route response in `{ data, requestId }` or `{ error, requestId }`, with `x-request-id` set on every response. Route handlers should throw `SrotivaApiError` and let a shared catch path call `jsonError`, rather than hand-rolling error responses.
 - `src/lib/config/` — `env.ts` (`loadEnv`) and `limits.ts` (`loadLimits`) validate and parse required environment variables eagerly (throwing on missing/invalid values) rather than reading `process.env` ad hoc elsewhere in the codebase.
 - `src/lib/db/` — `client.ts` exports a singleton `getDb()` `PrismaClient` (cached on `globalThis` outside production to survive dev hot-reload); `repositories/` holds one module per aggregate (`feeds.ts`, `jobs.ts`, `users.ts`, `workspaces.ts`) — domain code should go through repository functions rather than calling `getDb()`/Prisma directly from routes or components.
 - `prisma/schema.prisma` — the source of truth for the data model. Key aggregates: `User` → `Workspace` (via `WorkspaceMember` roles: owner/admin/editor/viewer/billing/support) → `Feed` → `FeedSource` / `FeedItem` (deduplicated via a `(feedId, fingerprint)` unique constraint) / `FeedFilter` (whitelist/blacklist/field-rule/dedup/similarity, scoped to workspace or feed) / `FeedRefreshJob` (queued/running/succeeded/failed/cancelled, database-backed — no Redis/BullMQ for the MVP) / `ErrorLog` / `AuditLog` / `UsageLimit`. Enums are mapped to lowercase snake_case Postgres enum values via `@map`.

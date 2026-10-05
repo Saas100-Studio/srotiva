@@ -1,13 +1,14 @@
 import { FeedSourceKind, FeedSourceType, FeedStatus, FeedVisibility, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { loadEnv } from "../config/env.ts";
 import { normalizeUserUrl } from "../crawler/url-safety.ts";
 import { getDb } from "../db/client.ts";
 import { createPrivateFeedToken, hashPrivateFeedToken } from "./feed-output-token.ts";
 import { createItemFingerprint } from "./fingerprint.ts";
 import { nextSuccessfulRefreshAt } from "./refresh-schedule.ts";
+import { assertFeedCapacity, assertItemCapacity, lockWorkspace } from "../usage/workspace-quotas.ts";
 
 type JsonObject = Record<string, Prisma.JsonValue>;
 type SaveItem = {
@@ -23,7 +24,7 @@ export type SaveFeedInput = {
 };
 
 function invalid(message: string, details: Record<string, unknown> = {}): never {
-  throw new MorselApiError(422, "VALIDATION_ERROR", message, details);
+  throw new SrotivaApiError(422, "VALIDATION_ERROR", message, details);
 }
 function object(value: unknown, field: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid(`${field} must be an object.`, { field });
@@ -124,13 +125,17 @@ export async function saveFeed(input: SaveFeedInput, createdByUserId: string) {
   const outputSlug = randomUUID();
   const privateToken = createPrivateFeedToken(feedId);
   const publicTokenHash = hashPrivateFeedToken(privateToken);
-  const outputUrl = `${loadEnv().APP_URL}/f/${outputSlug}`;
+  const env = loadEnv();
+  const outputUrl = `${env.APP_URL}/f/${outputSlug}`;
   const uniqueItems = new Map<string, SaveItem>();
   for (const previewItem of input.previewItems) {
     const fingerprint = createItemFingerprint({ feedUrl: input.sourceUrl, canonicalUrl: previewItem.canonicalUrl, sourceItemId: previewItem.sourceItemId, title: previewItem.title, datePublished: previewItem.datePublished });
     uniqueItems.set(fingerprint, previewItem);
   }
   return getDb().$transaction(async (tx) => {
+    await lockWorkspace(tx, input.workspaceId);
+    await assertFeedCapacity(tx, input.workspaceId, env.WORKSPACE_FEED_LIMIT);
+    await assertItemCapacity(tx, input.workspaceId, uniqueItems.size, env.WORKSPACE_ITEM_LIMIT);
     const feed = await tx.feed.create({
       data: {
         id: feedId, workspaceId: input.workspaceId, createdByUserId, name: input.feedTitle, slug, outputSlug, publicTokenHash,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { extractItemsFromHtml } from "../lib/feed/html-extractor.ts";
 
 const fixture = (name: string) => readFile(
@@ -50,7 +50,7 @@ test("rejects pages without a repeated item pattern", async () => {
       pageUrl: "https://example.com/about",
       bodyText,
     }),
-    (error: unknown) => error instanceof MorselApiError && error.code === "NO_ITEMS_EXTRACTED",
+    (error: unknown) => error instanceof SrotivaApiError && error.code === "NO_ITEMS_EXTRACTED",
   );
 });
 
@@ -78,7 +78,7 @@ test("rejects a low-confidence pair of bare links", () => {
       </main>`,
     }),
     (error: unknown) => {
-      assert.ok(error instanceof MorselApiError);
+      assert.ok(error instanceof SrotivaApiError);
       assert.equal(error.code, "NO_ITEMS_EXTRACTED");
       assert.deepEqual(error.details.warnings, [
         "LOW_CONFIDENCE",

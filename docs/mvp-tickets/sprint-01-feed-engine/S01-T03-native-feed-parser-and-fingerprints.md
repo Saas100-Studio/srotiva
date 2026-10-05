@@ -4,7 +4,7 @@ Sprint: 01 - Feed Engine Core
 
 ## Objective
 
-Parse RSS and Atom documents into Morsel's normalized feed item format with stable item fingerprints for exact deduplication.
+Parse RSS and Atom documents into Srotiva's normalized feed item format with stable item fingerprints for exact deduplication.
 
 ## Exact Scope
 

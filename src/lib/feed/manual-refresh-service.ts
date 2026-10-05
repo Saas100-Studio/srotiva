@@ -4,10 +4,11 @@ import {
   RefreshTrigger,
 } from "@prisma/client";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { writeAuditLog } from "../audit/audit-log.ts";
 import { loadEnv } from "../config/env.ts";
 import { getDb } from "../db/client.ts";
+import { consumeManualRefreshQuota, lockWorkspace } from "../usage/workspace-quotas.ts";
 
 const MANUAL_REFRESH_PRIORITY = 2_000_000_000;
 
@@ -20,7 +21,8 @@ export async function requestManualRefresh({
   feedId: string;
   actorUserId: string;
 }) {
-  const cooldownSeconds = loadEnv().MANUAL_REFRESH_COOLDOWN_SECONDS;
+  const env = loadEnv();
+  const cooldownSeconds = env.MANUAL_REFRESH_COOLDOWN_SECONDS;
 
   return getDb().$transaction(async (tx) => {
     const [feed] = await tx.$queryRaw<Array<{ id: string; status: string }>>`
@@ -34,15 +36,15 @@ export async function requestManualRefresh({
 
     const status = feed?.status.toUpperCase() as FeedStatus | undefined;
     if (!feed || status === FeedStatus.DELETED) {
-      throw new MorselApiError(404, "FEED_NOT_FOUND", "Feed not found.");
+      throw new SrotivaApiError(404, "FEED_NOT_FOUND", "Feed not found.");
     }
     if (status === FeedStatus.PAUSED) {
-      throw new MorselApiError(409, "FEED_PAUSED", "Resume this feed before refreshing it.");
+      throw new SrotivaApiError(409, "FEED_PAUSED", "Resume this feed before refreshing it.");
     }
     if (status !== FeedStatus.ACTIVE &&
         status !== FeedStatus.DEGRADED &&
         status !== FeedStatus.FAILED) {
-      throw new MorselApiError(404, "FEED_NOT_FOUND", "Feed not found.");
+      throw new SrotivaApiError(404, "FEED_NOT_FOUND", "Feed not found.");
     }
 
     const latestManual = await tx.feedRefreshJob.findFirst({
@@ -56,13 +58,37 @@ export async function requestManualRefresh({
     const secondsRemaining = Math.max(0, cooldownSeconds - elapsedSeconds);
 
     if (secondsRemaining > 0) {
-      throw new MorselApiError(
+      throw new SrotivaApiError(
         429,
         "REFRESH_THROTTLED",
         `Try again in ${secondsRemaining} seconds.`,
         { secondsRemaining },
       );
     }
+
+    const openJob = await tx.feedRefreshJob.findFirst({
+      where: {
+        workspaceId,
+        feedId,
+        status: { in: [RefreshJobStatus.QUEUED, RefreshJobStatus.RUNNING] },
+      },
+      select: { id: true },
+    });
+    if (openJob) {
+      throw new SrotivaApiError(
+        409,
+        "REFRESH_ALREADY_QUEUED",
+        "A refresh is already queued or running for this feed.",
+        { jobId: openJob.id },
+      );
+    }
+
+    await lockWorkspace(tx, workspaceId);
+    await consumeManualRefreshQuota(
+      tx,
+      workspaceId,
+      env.WORKSPACE_MONTHLY_MANUAL_REFRESH_LIMIT,
+    );
 
     const job = await tx.feedRefreshJob.create({
       data: {

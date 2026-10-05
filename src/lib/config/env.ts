@@ -1,4 +1,5 @@
 import { loadLimits } from "./limits.ts";
+import { loadAppUrl } from "./app-url.ts";
 
 type EnvOverrides = Record<string, string | undefined>;
 
@@ -14,23 +15,6 @@ function requiredString(overrides: EnvOverrides, name: string): string {
   return value;
 }
 
-function appUrl(overrides: EnvOverrides): string {
-  const value = requiredString(overrides, "APP_URL");
-  let url: URL;
-
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("APP_URL must be a valid URL.");
-  }
-
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("APP_URL must use http or https.");
-  }
-
-  return value.replace(/\/+$/, "");
-}
-
 export function loadEnv(overrides: EnvOverrides = process.env) {
   const SESSION_SECRET = requiredString(overrides, "SESSION_SECRET");
 
@@ -41,7 +25,7 @@ export function loadEnv(overrides: EnvOverrides = process.env) {
   }
 
   return {
-    APP_URL: appUrl(overrides),
+    APP_URL: loadAppUrl(overrides),
     DATABASE_URL: requiredString(overrides, "DATABASE_URL"),
     SESSION_SECRET,
     CRAWLER_USER_AGENT: requiredString(overrides, "CRAWLER_USER_AGENT"),

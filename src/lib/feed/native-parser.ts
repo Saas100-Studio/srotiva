@@ -1,6 +1,6 @@
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { createItemFingerprint } from "./fingerprint.ts";
 
 type XmlRecord = Record<string, unknown>;
@@ -48,8 +48,8 @@ const parser = new XMLParser({
   trimValues: true,
 });
 
-function invalidFeed(input: ParseNativeFeedInput): MorselApiError {
-  return new MorselApiError(422, "INVALID_FEED", "The document is not a valid RSS or Atom feed.", {
+function invalidFeed(input: ParseNativeFeedInput): SrotivaApiError {
+  return new SrotivaApiError(422, "INVALID_FEED", "The document is not a valid RSS or Atom feed.", {
     url: input.url,
     contentType: input.contentType ?? null,
   });

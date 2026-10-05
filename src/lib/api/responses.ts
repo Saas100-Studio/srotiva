@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { MorselApiError } from "./errors.ts";
+import { SrotivaApiError } from "./errors.ts";
 
 type ResponseInitWithRequestId = ResponseInit & { requestId?: string };
 
@@ -43,9 +43,9 @@ export function jsonError(
   init: ResponseInitWithRequestId = {},
 ) {
   const apiError =
-    error instanceof MorselApiError
+    error instanceof SrotivaApiError
       ? error
-      : new MorselApiError(
+      : new SrotivaApiError(
           500,
           "INTERNAL_ERROR",
           "An unexpected error occurred.",

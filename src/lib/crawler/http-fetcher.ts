@@ -4,7 +4,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { performance } from "node:perf_hooks";
 import { Readable } from "node:stream";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import {
   DEFAULT_FETCH_MAX_REDIRECTS,
   loadFetchLimits,
@@ -55,8 +55,8 @@ function fetchError(
   code: string,
   message: string,
   details: Record<string, unknown> = {},
-): MorselApiError {
-  return new MorselApiError(status, code, message, details);
+): SrotivaApiError {
+  return new SrotivaApiError(status, code, message, details);
 }
 
 export function getCrawlerUserAgent(): string {
@@ -336,7 +336,7 @@ export async function fetchDocument(
         { timeoutMs },
       );
     }
-    if (error instanceof MorselApiError) throw error;
+    if (error instanceof SrotivaApiError) throw error;
     throw fetchError(
       502,
       FETCH_ERROR_CODE.HTTP_ERROR,

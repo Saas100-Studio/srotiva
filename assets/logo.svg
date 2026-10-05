@@ -1,8 +1,0 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Morsel logo</title>
-  <desc id="desc">Orange rounded square mark with white signal arcs and a black outline.</desc>
-  <rect x="16" y="16" width="480" height="480" rx="104" fill="#FF4F00" stroke="#111111" stroke-width="24"/>
-  <circle cx="166" cy="346" r="42" fill="#FFFFFF"/>
-  <path d="M152 252C211.647 252 260 300.353 260 360" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round"/>
-  <path d="M152 148C269.084 148 364 242.916 364 360" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round"/>
-</svg>

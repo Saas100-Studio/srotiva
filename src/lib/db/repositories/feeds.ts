@@ -16,6 +16,8 @@ import { isDeepStrictEqual } from "node:util";
 import { getDb } from "../client.ts";
 import { nextFailedRefreshAt, nextSuccessfulRefreshAt } from "../../feed/refresh-schedule.ts";
 import { applyFilters } from "../../feed/filter-engine.ts";
+import { loadEnv } from "../../config/env.ts";
+import { assertItemCapacity, lockWorkspace } from "../../usage/workspace-quotas.ts";
 
 const feedProjection = {
   id: true,
@@ -46,7 +48,46 @@ export function listFeeds(workspaceId: string) {
     where: { workspaceId, deletedAt: null, status: { not: FeedStatus.DELETED } },
     select: feedProjection,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 100,
   });
+}
+
+export const DASHBOARD_FEED_PAGE_SIZE = 20;
+
+export async function listDashboardFeeds(
+  workspaceId: string,
+  { page, query }: { page: number; query: string },
+) {
+  const normalizedQuery = query.trim().slice(0, 100);
+  const normalizedPage = Math.min(Math.max(Math.trunc(page) || 1, 1), 10_000);
+  const where = {
+    workspaceId,
+    deletedAt: null,
+    status: { not: FeedStatus.DELETED },
+    ...(normalizedQuery
+      ? {
+          OR: [
+            { name: { contains: normalizedQuery, mode: Prisma.QueryMode.insensitive } },
+            { sourceUrl: { contains: normalizedQuery, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+      : {}),
+  } satisfies Prisma.FeedWhereInput;
+  const rows = await getDb().feed.findMany({
+    where,
+    select: feedProjection,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: (normalizedPage - 1) * DASHBOARD_FEED_PAGE_SIZE,
+    take: DASHBOARD_FEED_PAGE_SIZE + 1,
+  });
+
+  return {
+    feeds: rows.slice(0, DASHBOARD_FEED_PAGE_SIZE),
+    page: normalizedPage,
+    query: normalizedQuery,
+    hasPreviousPage: normalizedPage > 1,
+    hasNextPage: rows.length > DASHBOARD_FEED_PAGE_SIZE,
+  };
 }
 
 export function findFeedDetail(workspaceId: string, feedId: string) {
@@ -132,6 +173,41 @@ export function initializePrivateFeedToken(workspaceId: string, feedId: string, 
     where: { id: feedId, workspaceId, visibility: FeedVisibility.PRIVATE, publicTokenHash: null },
     data: { publicTokenHash },
   });
+}
+
+export async function privateFeedTokenHashMatches(
+  workspaceId: string,
+  feedId: string,
+  publicTokenHash: string,
+): Promise<boolean> {
+  return await getDb().feed.count({
+    where: {
+      id: feedId,
+      workspaceId,
+      visibility: FeedVisibility.PRIVATE,
+      deletedAt: null,
+      status: { not: FeedStatus.DELETED },
+      publicTokenHash,
+    },
+  }) === 1;
+}
+
+export async function rotatePrivateFeedTokenHash(
+  workspaceId: string,
+  feedId: string,
+  publicTokenHash: string,
+): Promise<boolean> {
+  const result = await getDb().feed.updateMany({
+    where: {
+      id: feedId,
+      workspaceId,
+      visibility: FeedVisibility.PRIVATE,
+      deletedAt: null,
+      status: { not: FeedStatus.DELETED },
+    },
+    data: { publicTokenHash },
+  });
+  return result.count === 1;
 }
 
 export type FeedPatch = {
@@ -457,6 +533,13 @@ export async function recordRefreshSuccess(input: {
     const now = new Date();
 
     if (newItems.length) {
+      await lockWorkspace(tx, feed.workspaceId);
+      await assertItemCapacity(
+        tx,
+        feed.workspaceId,
+        newItems.length,
+        loadEnv().WORKSPACE_ITEM_LIMIT,
+      );
       await tx.feedItem.createMany({
         data: newItems.map((item) => ({
           ...item,

@@ -1,4 +1,4 @@
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { ROBOTS_CACHE_TTL_MS } from "../config/limits.ts";
 import {
   fetchDocument,
@@ -121,7 +121,7 @@ async function getRobotsBody(
     bodyText = result.bodyText;
   } catch (error) {
     if (
-      error instanceof MorselApiError &&
+      error instanceof SrotivaApiError &&
       error.code === "FETCH_HTTP_ERROR" &&
       error.details.status === 404
     ) {
@@ -152,7 +152,7 @@ export async function checkRobotsAllowed(
     path,
   );
   if (!allowed) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       403,
       "ROBOTS_DISALLOWED",
       "The site's robots policy does not allow this URL to be fetched.",

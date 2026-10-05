@@ -23,9 +23,8 @@ export function AppShell({
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link className="brand" href="/dashboard" aria-label="Morsel dashboard">
-          <span className="brand-mark"><span /></span>
-          Morsel
+        <Link className="brand" href="/dashboard" aria-label="Srotiva dashboard">
+          Srotiva
         </Link>
         <span className="app-header__email">{currentUser.user.email}</span>
         <LogoutButton />

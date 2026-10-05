@@ -1,6 +1,6 @@
 import { WorkspaceRole, type WorkspaceMember } from "@prisma/client";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { findActiveWorkspaceMembership } from "../db/repositories/workspaces.ts";
 
 export type WorkspaceAccessRole =
@@ -42,8 +42,8 @@ export function hasWorkspaceRole(
   );
 }
 
-function accessDenied(): MorselApiError {
-  return new MorselApiError(
+function accessDenied(): SrotivaApiError {
+  return new SrotivaApiError(
     403,
     "WORKSPACE_ACCESS_DENIED",
     "You do not have permission to access this workspace.",

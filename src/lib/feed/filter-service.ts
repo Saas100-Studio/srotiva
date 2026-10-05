@@ -6,7 +6,7 @@ import {
   Prisma,
 } from "@prisma/client";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { getDb } from "../db/client.ts";
 import { applyFilters } from "./filter-engine.ts";
 
@@ -32,8 +32,8 @@ type FilterInput = {
   isEnabled: boolean;
 };
 
-function validation(message: string): MorselApiError {
-  return new MorselApiError(422, "VALIDATION_ERROR", message);
+function validation(message: string): SrotivaApiError {
+  return new SrotivaApiError(422, "VALIDATION_ERROR", message);
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -148,8 +148,8 @@ async function feedExists(workspaceId: string, feedId: string): Promise<boolean>
   }));
 }
 
-function notFound(message = "Feed not found."): MorselApiError {
-  return new MorselApiError(404, "NOT_FOUND", message);
+function notFound(message = "Feed not found."): SrotivaApiError {
+  return new SrotivaApiError(404, "NOT_FOUND", message);
 }
 
 export async function listFilters(workspaceId: string, feedId: string) {
@@ -177,7 +177,7 @@ export async function createFilter(workspaceId: string, feedId: string, input: F
       _max: { orderIndex: true },
     });
     if (existing._count >= MAX_FILTERS_PER_FEED) {
-      throw new MorselApiError(409, "LIMIT_EXCEEDED", `A feed can have at most ${MAX_FILTERS_PER_FEED} filters.`);
+      throw new SrotivaApiError(409, "LIMIT_EXCEEDED", `A feed can have at most ${MAX_FILTERS_PER_FEED} filters.`);
     }
     return tx.feedFilter.create({
       data: {

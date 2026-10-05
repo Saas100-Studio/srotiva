@@ -1,5 +1,13 @@
 import Link from "next/link";
 
+import { createPublicPageMetadata } from "../../../lib/seo/metadata.ts";
+
+export const metadata = createPublicPageMetadata({
+  title: "Output formats",
+  description: "Choose RSS, JSON, or CSV output for a Srotiva feed.",
+  path: "/help/output-formats",
+});
+
 export default function OutputFormatsHelpPage() {
   return (
     <main className="help-article">

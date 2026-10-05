@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { createSessionCookie } from "../lib/auth/session.ts";
 import type {
   FetchDocumentOptions,
@@ -64,7 +64,7 @@ test("discovery service recognizes a directly submitted native feed", async () =
   const result = await discoverFeedPreview(
     { url: "https://example.com/feed.xml" },
     {
-      getCrawlerUserAgent: () => "MorselBot/1.0",
+      getCrawlerUserAgent: () => "SrotivaBot/1.0",
       checkRobotsAllowed: async () => true,
       fetchDocument: async () => document(
         "https://example.com/feed.xml",
@@ -94,7 +94,7 @@ test("discovery service prefers a native candidate and limits preview to ten", a
   const result = await discoverFeedPreview(
     { url: "https://example.com/blog" },
     {
-      getCrawlerUserAgent: () => "MorselBot/1.0",
+      getCrawlerUserAgent: () => "SrotivaBot/1.0",
       checkRobotsAllowed: async () => true,
       discoverNativeFeeds: async () => [{
         url: "https://example.com/feed.xml",
@@ -124,7 +124,7 @@ test("discovery service falls back to HTML and checks redirect robots policy", a
   const result = await discoverFeedPreview(
     { url: "https://example.com/start" },
     {
-      getCrawlerUserAgent: () => "MorselBot/1.0",
+      getCrawlerUserAgent: () => "SrotivaBot/1.0",
       checkRobotsAllowed: async ({ targetUrl }) => {
         checked.push(targetUrl.toString());
         return true;
@@ -148,26 +148,26 @@ test("discovery service maps unsafe and empty sources to stable errors", async (
     discoverFeedPreview(
       { url: "https://example.com" },
       {
-        getCrawlerUserAgent: () => "MorselBot/1.0",
+        getCrawlerUserAgent: () => "SrotivaBot/1.0",
         checkRobotsAllowed: async () => {
-          throw new MorselApiError(422, "UNSAFE_URL", "unsafe");
+          throw new SrotivaApiError(422, "UNSAFE_URL", "unsafe");
         },
       },
     ),
-    (error: unknown) => error instanceof MorselApiError && error.code === "UNSAFE_URL",
+    (error: unknown) => error instanceof SrotivaApiError && error.code === "UNSAFE_URL",
   );
 
   await assert.rejects(
     discoverFeedPreview(
       { url: "https://example.com" },
       {
-        getCrawlerUserAgent: () => "MorselBot/1.0",
+        getCrawlerUserAgent: () => "SrotivaBot/1.0",
         checkRobotsAllowed: async () => true,
         discoverNativeFeeds: async () => [],
         fetchDocument: async () => document("https://example.com/", "<html><p>Empty</p></html>"),
       },
     ),
-    (error: unknown) => error instanceof MorselApiError && error.code === "NO_FEED_CANDIDATE",
+    (error: unknown) => error instanceof SrotivaApiError && error.code === "NO_FEED_CANDIDATE",
   );
 });
 
@@ -178,7 +178,7 @@ test("discover API authenticates the active workspace and writes no feed rows", 
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
   const user = await createUser({
-    email: `discover-${suffix}@morsel.test`,
+    email: `discover-${suffix}@srotiva.test`,
     passwordHash: "test-password-hash",
   });
   const workspace = await createWorkspaceWithOwner({
@@ -258,7 +258,7 @@ test("discover API authenticates the active workspace and writes no feed rows", 
     await t.test("returns the stable unsafe URL error envelope", async () => {
       const response = await handleDiscoverPost(request(workspace.id, cookie), {
         discoverFeedPreview: async () => {
-          throw new MorselApiError(422, "UNSAFE_URL", "The URL is unsafe.");
+          throw new SrotivaApiError(422, "UNSAFE_URL", "The URL is unsafe.");
         },
       });
       const body = await response.json() as { error?: { code: string } };

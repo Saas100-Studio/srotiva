@@ -11,9 +11,9 @@ import { createWorkspaceWithOwner } from "../lib/db/repositories/workspaces.ts";
 test("feed diagnostics are tenant-scoped and support-only", async (t) => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const owner = await createUser({ email: `diagnostics-owner-${suffix}@morsel.test`, passwordHash: "hash" });
-  const support = await createUser({ email: `diagnostics-support-${suffix}@morsel.test`, passwordHash: "hash" });
-  const invitedSupport = await createUser({ email: `diagnostics-invited-${suffix}@morsel.test`, passwordHash: "hash" });
+  const owner = await createUser({ email: `diagnostics-owner-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const support = await createUser({ email: `diagnostics-support-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const invitedSupport = await createUser({ email: `diagnostics-invited-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: owner.id, name: "Diagnostics", slug: `diagnostics-${suffix}` });
   await db.workspaceMember.createMany({
     data: [

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 type AuthFormProps = {
   mode: "login" | "signup";
@@ -14,6 +15,7 @@ type ApiErrorBody = {
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter();
   const isSignup = mode === "signup";
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -48,9 +50,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
-      window.location.assign("/dashboard");
+      router.push("/dashboard");
+      router.refresh();
     } catch {
-      setError("Unable to reach Morsel. Please try again.");
+      setError("Unable to reach Srotiva. Please try again.");
     } finally {
       setPending(false);
     }

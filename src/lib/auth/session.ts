@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export const SESSION_COOKIE_NAME = "morsel_session";
+export const SESSION_COOKIE_NAME = "srotiva_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 const MIN_SESSION_SECRET_LENGTH = 32;

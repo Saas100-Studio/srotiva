@@ -21,8 +21,8 @@ const previewItem = (number: number, date: string | null = `2026-01-0${number}T0
 test("feed items are cursor-paginated newest first and isolated by workspace", async () => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `items-${suffix}@morsel.test`, passwordHash: "hash" });
-  const other = await createUser({ email: `items-other-${suffix}@morsel.test`, passwordHash: "hash" });
+  const user = await createUser({ email: `items-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const other = await createUser({ email: `items-other-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: user.id, name: "Items", slug: `items-${suffix}` });
   const otherWorkspace = await createWorkspaceWithOwner({ userId: other.id, name: "Other Items", slug: `items-other-${suffix}` });
   const cookie = createSessionCookie(user.id, { secure: false });

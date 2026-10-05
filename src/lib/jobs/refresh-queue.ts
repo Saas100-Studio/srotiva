@@ -7,6 +7,8 @@ import {
 import { getDb } from "../db/client.ts";
 import { claimQueuedRefreshJob } from "./job-locks.ts";
 
+export const DEFAULT_STALE_JOB_AGE_MS = 15 * 60_000;
+
 export type RefreshJobResult = {
   itemsFound: number;
   itemsNew: number;
@@ -50,6 +52,36 @@ export function claimNextRefreshJob({
   }
 
   return claimQueuedRefreshJob(workerId);
+}
+
+export async function reclaimStaleRefreshJobs({
+  now = new Date(),
+  staleAfterMs = DEFAULT_STALE_JOB_AGE_MS,
+}: {
+  now?: Date;
+  staleAfterMs?: number;
+} = {}): Promise<number> {
+  if (!Number.isSafeInteger(staleAfterMs) || staleAfterMs <= 0) {
+    throw new TypeError("staleAfterMs must be a positive integer");
+  }
+
+  const staleBefore = new Date(now.getTime() - staleAfterMs);
+  const reclaimed = await getDb().feedRefreshJob.updateMany({
+    where: {
+      status: RefreshJobStatus.RUNNING,
+      lockedAt: { lt: staleBefore },
+    },
+    data: {
+      status: RefreshJobStatus.QUEUED,
+      startedAt: null,
+      finishedAt: null,
+      lockedAt: null,
+      lockedBy: null,
+      nextRetryAt: now,
+    },
+  });
+
+  return reclaimed.count;
 }
 
 export async function completeRefreshJob({

@@ -1,4 +1,4 @@
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import {
   fetchDocument,
   getCrawlerUserAgent,
@@ -91,7 +91,7 @@ function redirectOptions(
     ...fetchOptions,
     beforeRedirect: async (url) => {
       if (requiredOrigin && url.origin !== requiredOrigin) {
-        throw new MorselApiError(
+        throw new SrotivaApiError(
           400,
           "CROSS_ORIGIN_FEED_PROBE",
           "A common feed path redirected to a different origin.",
@@ -139,7 +139,7 @@ export async function discoverNativeFeeds(
         confidence: 0.75,
       });
     } catch (error) {
-      if (!(error instanceof MorselApiError)) throw error;
+      if (!(error instanceof SrotivaApiError)) throw error;
     }
   }
   return uniqueRanked(candidates);

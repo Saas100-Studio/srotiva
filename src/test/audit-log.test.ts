@@ -17,7 +17,7 @@ test("audit helper writes the expected action and metadata", async () => {
 
   try {
     const user = await createUser({
-      email: `audit-${suffix}@morsel.test`,
+      email: `audit-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     userId = user.id;

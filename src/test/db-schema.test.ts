@@ -41,7 +41,7 @@ test("MVP database schema constraints", async (t) => {
 
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const email = `schema-${suffix}@morsel.test`;
+  const email = `schema-${suffix}@srotiva.test`;
   const workspaceSlug = `schema-${suffix}`;
   const secondWorkspaceSlug = `schema-second-${suffix}`;
   let userId = "";

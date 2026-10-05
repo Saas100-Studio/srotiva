@@ -6,6 +6,7 @@ import {
   type AuthWorkspace,
 } from "../auth/current-user.ts";
 import { requireWorkspaceRole } from "../auth/workspace-access.ts";
+import { assertTrustedMutationOrigin } from "../security/request-origin.ts";
 
 export type RequestContext = {
   user: AuthUser;
@@ -19,6 +20,7 @@ export async function requireUser(request: Request): Promise<AuthUser> {
 export async function createRequestContext(
   request: Request,
 ): Promise<RequestContext> {
+  assertTrustedMutationOrigin(request);
   const currentUser = await requireCurrentUser(request);
   const membership = await requireWorkspaceRole({
     userId: currentUser.user.id,

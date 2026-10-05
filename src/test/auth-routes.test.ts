@@ -40,7 +40,7 @@ test("auth routes create and authenticate an account", async (t) => {
 
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const email = `AUTH-${suffix}@MORSEL.TEST`;
+  const email = `AUTH-${suffix}@SROTIVA.TEST`;
   const normalizedEmail = email.toLowerCase();
   const password = "correct-horse-battery-staple";
   let userId = "";
@@ -118,7 +118,7 @@ test("auth routes create and authenticate an account", async (t) => {
     });
 
     await t.test("signup rolls back when its audit write fails", async () => {
-      const rollbackEmail = `rollback-${suffix}@morsel.test`;
+      const rollbackEmail = `rollback-${suffix}@srotiva.test`;
 
       await assert.rejects(
         signupAccount(

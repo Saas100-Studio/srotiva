@@ -16,6 +16,7 @@ import {
   completeRefreshJob,
   enqueueRefreshJob,
   failRefreshJob,
+  reclaimStaleRefreshJobs,
 } from "../lib/jobs/refresh-queue.ts";
 
 test("database refresh queue lifecycle", async (t) => {
@@ -24,7 +25,7 @@ test("database refresh queue lifecycle", async (t) => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
   const user = await createUser({
-    email: `queue-${suffix}@morsel.test`,
+    email: `queue-${suffix}@srotiva.test`,
     passwordHash: "test-password-hash",
   });
   const workspace = await createWorkspaceWithOwner({
@@ -41,29 +42,41 @@ test("database refresh queue lifecycle", async (t) => {
     sourceUrl: "https://example.com/feed.xml",
     refreshIntervalMinutes: 60,
   });
+  const feeds = await Promise.all([
+    Promise.resolve(feed),
+    ...["high-oldest", "high-newer", "locked"].map((slug) => createFeed({
+      workspaceId: workspace.id,
+      createdByUserId: user.id,
+      name: `Queue Test Feed ${slug}`,
+      slug,
+      sourceType: FeedSourceType.NATIVE,
+      sourceUrl: `https://example.com/${slug}.xml`,
+      refreshIntervalMinutes: 60,
+    })),
+  ]);
 
   try {
     const low = await enqueueRefreshJob({
       workspaceId: workspace.id,
-      feedId: feed.id,
+      feedId: feeds[0]!.id,
       trigger: RefreshTrigger.SCHEDULED,
       priority: 1_000_000_000,
     });
     const oldestHigh = await enqueueRefreshJob({
       workspaceId: workspace.id,
-      feedId: feed.id,
+      feedId: feeds[1]!.id,
       trigger: RefreshTrigger.MANUAL,
       priority: 2_000_000_000,
     });
     const newerHigh = await enqueueRefreshJob({
       workspaceId: workspace.id,
-      feedId: feed.id,
+      feedId: feeds[2]!.id,
       trigger: RefreshTrigger.RETRY,
       priority: 2_000_000_000,
     });
     const locked = await enqueueRefreshJob({
       workspaceId: workspace.id,
-      feedId: feed.id,
+      feedId: feeds[3]!.id,
       trigger: RefreshTrigger.ADMIN,
       priority: 2_100_000_000,
     });
@@ -139,6 +152,27 @@ test("database refresh queue lifecycle", async (t) => {
       assert.equal(failed.errorMessage, "Source fetch failed");
       assert.deepEqual(failed.nextRetryAt, retryAt);
       assert.ok(failed.finishedAt);
+    });
+
+    await t.test("requeues a stale running job and clears its ownership", async () => {
+      await db.feedRefreshJob.update({
+        where: { id: low.id },
+        data: {
+          status: RefreshJobStatus.RUNNING,
+          lockedAt: new Date("2026-01-01T00:00:00Z"),
+          lockedBy: "crashed-worker",
+          startedAt: new Date("2026-01-01T00:00:00Z"),
+        },
+      });
+
+      const now = new Date("2026-01-01T00:30:00Z");
+      assert.equal(await reclaimStaleRefreshJobs({ now, staleAfterMs: 15 * 60_000 }), 1);
+      const reclaimed = await db.feedRefreshJob.findUniqueOrThrow({ where: { id: low.id } });
+      assert.equal(reclaimed.status, RefreshJobStatus.QUEUED);
+      assert.equal(reclaimed.lockedAt, null);
+      assert.equal(reclaimed.lockedBy, null);
+      assert.equal(reclaimed.startedAt, null);
+      assert.deepEqual(reclaimed.nextRetryAt, now);
     });
   } finally {
     await db.workspace.delete({ where: { id: workspace.id } });

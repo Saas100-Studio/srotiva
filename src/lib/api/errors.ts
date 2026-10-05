@@ -10,7 +10,7 @@ export const URL_SAFETY_ERROR_CODE = {
 export type UrlSafetyErrorCode =
   (typeof URL_SAFETY_ERROR_CODE)[keyof typeof URL_SAFETY_ERROR_CODE];
 
-export class MorselApiError extends Error {
+export class SrotivaApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details: ApiErrorDetails;
@@ -22,7 +22,7 @@ export class MorselApiError extends Error {
     details: ApiErrorDetails = {},
   ) {
     super(message);
-    this.name = "MorselApiError";
+    this.name = "SrotivaApiError";
     this.status = status;
     this.code = code;
     this.details = details;

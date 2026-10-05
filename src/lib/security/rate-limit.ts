@@ -1,4 +1,4 @@
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 
 type Bucket = { count: number; resetAt: number };
 type RateLimitInput = {
@@ -42,7 +42,7 @@ export function checkRateLimit({ bucket, key, limit, windowMs, now = Date.now() 
 export function enforceRateLimit(input: RateLimitInput): void {
   const result = checkRateLimit(input);
   if (!result.allowed) {
-    throw new MorselApiError(429, "RATE_LIMITED", "Too many requests. Try again later.", {
+    throw new SrotivaApiError(429, "RATE_LIMITED", "Too many requests. Try again later.", {
       retryAfterSeconds: result.retryAfterSeconds,
     });
   }

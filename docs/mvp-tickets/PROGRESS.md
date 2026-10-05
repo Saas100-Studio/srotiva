@@ -1,6 +1,6 @@
-# Morsel MVP Progress
+# Srotiva MVP Progress
 
-Last updated: 2026-09-27
+Last updated: 2026-10-04
 
 Use this file to help Codex agents understand the current implementation state without rereading the full PRD. Update it after every ticket.
 
@@ -48,7 +48,7 @@ Do not write real secrets in this file.
 
 | Ticket | Status | Branch/Commit | Commands Run | Notes |
 | --- | --- | --- | --- | --- |
-| S00-T01 Runtime Config and API Errors | Done | `main` | `node --test src/test/config-env.test.mjs src/test/api-errors.test.mjs`; `node --test src/test/api-errors.test.mjs`; `bun run check` | 5 API-focused tests passed; 12 full-suite tests and production build passed. Error responses preserve their `MorselApiError` HTTP status. |
+| S00-T01 Runtime Config and API Errors | Done | `main` | `node --test src/test/config-env.test.mjs src/test/api-errors.test.mjs`; `node --test src/test/api-errors.test.mjs`; `bun run check` | 5 API-focused tests passed; 12 full-suite tests and production build passed. Error responses preserve their `SrotivaApiError` HTTP status. |
 | S00-T01b TypeScript and Lint Setup | Done | `main` / `8e4ca03` | `bun install`; `bun run typecheck`; `bun run lint`; `bun run check` | Standalone typecheck regenerates Next.js route types before running strict TypeScript. All 13 tests, typecheck, lint, and build pass. See the ticket for setup detail and Decisions for the `typescript`/`eslint` version pins. |
 | S00-T02 Database Schema and Client | Done | `main` / `59e709d` | `bunx prisma format`; `bunx prisma validate`; `bunx prisma generate`; `bunx prisma migrate dev --name init_mvp_schema --create-only`; `bunx prisma migrate dev`; `bun run db:seed`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script`; `bunx prisma migrate deploy`; `node --env-file=.env.local --test src/test/db-schema.test.ts`; `bun run check` | Initial PostgreSQL schema and migration, reusable client, repository helpers, idempotent development seed, feed/workspace tenant-integrity constraints, and constraint tests are complete. All 20 tests, lint, typecheck, and production build pass. |
 | S00-T03 Auth and Default Workspace | Done | `main` | `bun add argon2`; `node --env-file-if-exists=.env.local --test src/test/auth-password.test.ts src/test/auth-session.test.ts src/test/auth-routes.test.ts`; `bun run check` | Argon2id password auth, signed 30-day session cookies, signup/login/logout/me APIs, atomic default workspace ownership with randomized slug collision fallback, minimal auth pages, and the authenticated dashboard landing are complete. All 33 tests, lint, strict typecheck, and production build pass. No database migration was needed. |
@@ -75,6 +75,10 @@ Do not write real secrets in this file.
 | S05-T03 Filter UI | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/filter-ui.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check` | Feed detail now loads and displays saved keyword rules for every workspace member. Editors can validate and create whitelist/blacklist rules, preview exact included/excluded counts with bounded samples and reasons, enable/disable rules, and confirm deletion; viewers remain read-only. Pending, empty, validation, and request-ID error states are covered. No migration or dependency was needed. All 157 tests, lint, strict typecheck, and production build pass. |
 | S05-T04 Rate Limits and Observability | Done | `main` | `node --env-file-if-exists=.env.local --test src/test/rate-limit.test.ts src/test/workspace-access.test.ts src/test/feed-diagnostics-api.test.ts src/test/auth-routes.test.ts src/test/feed-discover-api.test.ts src/test/manual-refresh-api.test.ts src/test/public-output-routes.test.ts`; `bun run typecheck`; `bun run lint`; `bun run check` | Bounded process-local fixed-window limits protect signup, login, discovery, manual refresh, and shared RSS/JSON/CSV output rendering with `RATE_LIMITED` and `Retry-After`; saturated storage purges expired buckets and otherwise fails closed without evicting live limits. Highest-risk route failures emit token-free structured JSON with request IDs and error codes, discovery failures persist safe database records, existing refresh failure records remain single-written, and joined `SUPPORT` workspace members can inspect tenant-scoped token-free feed diagnostics. Pending invitations are excluded from both authorization and current-user workspace selection. The existing support role avoided a schema migration. All 167 tests, lint, strict typecheck, and production build pass. |
 | S05-T05 MVP Production Readiness Gate | Done | `main` | `bun run validate-env`; `node --env-file-if-exists=.env.local --test src/test/health-route.test.ts src/test/mvp-smoke.test.ts`; `bun run lint`; `bun run typecheck`; `bun run check`; `bunx prisma validate`; `bunx prisma migrate deploy`; `bunx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script` | A no-store readiness endpoint reports app version and bounded, coalesced database readiness without secrets; external refresh processes are honestly marked not checked. Strict environment validation is runnable and testable, a database-backed no-network smoke covers the full MVP path, refresh error details redact URL query secrets, and linked draft legal placeholders plus deployment/runbook documentation define the production gate. No migration or dependency was needed. All 173 tests, lint, strict typecheck, and production build pass; Prisma reports no pending migration or schema drift. Public launch remains blocked on hosting, backups/restore, trusted proxy configuration, durable monitoring, paced scheduler/worker execution, and legal review. |
+
+## Maintenance Fixes
+
+- 2026-10-04: Constrained the feed-creation preview to its dashboard column and made oversized feed titles, descriptions, and warnings wrap without introducing page-level horizontal scrolling. Added a feed creation UI regression assertion. `bun run check` passes with all 173 tests and the production build. Restarted the local `next start` process and verified the large Lapaas Voice preview in-browser: document scroll width equals client width at the reported desktop viewport.
 
 ## Sprint Release Notes Draft
 
@@ -116,7 +120,7 @@ Release type: alpha update.
 
 Expected user-facing change: saved feeds refresh automatically, users can manually refresh, and feed health is visible.
 
-Message: Feeds now update automatically and show refresh status, making Morsel usable for real monitoring workflows.
+Message: Feeds now update automatically and show refresh status, making Srotiva usable for real monitoring workflows.
 
 ### Sprint 05 - Filters and Production Hardening
 
@@ -150,7 +154,7 @@ Public production release blockers: select and configure hosting for the web, sc
 - Evaluate enabled per-feed keyword filters inside the feed-locked refresh transaction so persistence uses the latest rules. Normalize item text and keywords with Unicode NFKC, use case-insensitive substring matching, give blacklist matches precedence, require any whitelist match when whitelists exist, and retain filtered items with structured reasons while public outputs continue selecting active items only.
 - Keep MVP rate limits as bounded process-local fixed windows and use the existing exact `SUPPORT` workspace role for tenant-scoped diagnostics. Trust forwarded client-IP headers only behind the deployment proxy; move buckets to Redis before multi-instance scale.
 - Use Argon2id with 19 MiB memory, two iterations, and one lane for MVP password hashing. `argon2` is the only production dependency added by S00-T03.
-- Use a 30-day HMAC-SHA256 signed session cookie named `morsel_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
+- Use a 30-day HMAC-SHA256 signed session cookie named `srotiva_session`. It is `HttpOnly`, `SameSite=Lax`, and `Secure` in production; signing uses `SESSION_SECRET`. No session migration was added because the required user password and login metadata already exist and server-side session revocation is outside this ticket's simple MVP auth scope.
 - Limit the MVP workspace authorization hierarchy to `OWNER > EDITOR > VIEWER`. Other roles already present in the broad schema do not receive MVP resource access until their behavior is explicitly implemented.
 - Build request context from the authenticated user's active workspace and revalidate its active membership through the shared role helper. Successful password signup/login and authenticated logout events write user-targeted audit rows; signup creates its audit row in the account transaction so partial signup state cannot survive an audit failure. The required audit indexes were already present in the initial schema.
 - Fail URL safety closed: allow only HTTP/HTTPS without credentials on ports 80/443, require every DNS answer to be a public IPv4/IPv6 address, and re-run the same validation for redirects. Literal and obfuscated IP hosts are normalized before range checks; URL fragments are removed because they are not sent in HTTP requests.

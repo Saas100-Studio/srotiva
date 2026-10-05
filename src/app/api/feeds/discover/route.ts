@@ -1,4 +1,5 @@
-import { MorselApiError } from "../../../../lib/api/errors.ts";
+import { SrotivaApiError } from "../../../../lib/api/errors.ts";
+import { readBoundedJsonBody } from "../../../../lib/api/json-body.ts";
 import { createRequestContext } from "../../../../lib/api/request-context.ts";
 import { createRequestId, jsonError, jsonOk } from "../../../../lib/api/responses.ts";
 import { discoverFeedPreview } from "../../../../lib/feed/feed-discovery-service.ts";
@@ -12,12 +13,12 @@ type DiscoverRouteDependencies = {
 };
 
 function routeError(error: unknown): unknown {
-  if (!(error instanceof MorselApiError)) return error;
+  if (!(error instanceof SrotivaApiError)) return error;
   if (error.code === "UNAUTHENTICATED") {
-    return new MorselApiError(401, "UNAUTHORIZED", "Authentication is required.");
+    return new SrotivaApiError(401, "UNAUTHORIZED", "Authentication is required.");
   }
   if (error.code === "WORKSPACE_ACCESS_DENIED") {
-    return new MorselApiError(403, "FORBIDDEN", "Workspace access is required.");
+    return new SrotivaApiError(403, "FORBIDDEN", "Workspace access is required.");
   }
   return error;
 }
@@ -31,21 +32,21 @@ export async function handleDiscoverPost(
   let discoveryStarted = false;
   try {
     const context = await createRequestContext(request);
-    const value: unknown = await request.json().catch(() => {
-      throw new MorselApiError(422, "INVALID_URL", "The request body must contain a valid URL.");
+    const value = await readBoundedJsonBody(request, {
+      invalidJsonError: () => new SrotivaApiError(422, "INVALID_URL", "The request body must contain a valid URL."),
     });
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new MorselApiError(422, "INVALID_URL", "The request body must contain a valid URL.");
+      throw new SrotivaApiError(422, "INVALID_URL", "The request body must contain a valid URL.");
     }
     const body = value as Record<string, unknown>;
     if (
       typeof body.workspaceId !== "string" || !body.workspaceId ||
       typeof body.url !== "string" || !body.url.trim()
     ) {
-      throw new MorselApiError(422, "INVALID_URL", "The request body must contain a valid URL.");
+      throw new SrotivaApiError(422, "INVALID_URL", "The request body must contain a valid URL.");
     }
     if (body.workspaceId !== context.workspace.id) {
-      throw new MorselApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
+      throw new SrotivaApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
     }
     workspaceId = context.workspace.id;
     enforceRateLimit({
@@ -59,9 +60,9 @@ export async function handleDiscoverPost(
   } catch (error) {
     const responseError = routeError(error);
     if (discoveryStarted && workspaceId) {
-      const apiError = responseError instanceof MorselApiError
+      const apiError = responseError instanceof SrotivaApiError
         ? responseError
-        : new MorselApiError(500, "INTERNAL_ERROR", "An unexpected error occurred.");
+        : new SrotivaApiError(500, "INTERNAL_ERROR", "An unexpected error occurred.");
       await (dependencies.writeErrorLog ?? writeErrorLog)({
         workspaceId,
         source: "feed_discovery",

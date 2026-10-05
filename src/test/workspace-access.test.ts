@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { WorkspaceRole } from "@prisma/client";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import {
   createRequestContext,
   requireUser,
@@ -16,7 +16,7 @@ import { createWorkspaceWithOwner } from "../lib/db/repositories/workspaces.ts";
 
 async function assertAccessDenied(promise: Promise<unknown>): Promise<void> {
   await assert.rejects(promise, (error: unknown) => {
-    assert.ok(error instanceof MorselApiError);
+    assert.ok(error instanceof SrotivaApiError);
     assert.equal(error.status, 403);
     assert.equal(error.code, "WORKSPACE_ACCESS_DENIED");
     return true;
@@ -34,23 +34,23 @@ test("workspace role authorization enforces tenant boundaries", async (t) => {
 
   try {
     const owner = await createUser({
-      email: `access-owner-${suffix}@morsel.test`,
+      email: `access-owner-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     const editor = await createUser({
-      email: `access-editor-${suffix}@morsel.test`,
+      email: `access-editor-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     const viewer = await createUser({
-      email: `access-viewer-${suffix}@morsel.test`,
+      email: `access-viewer-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     const outsider = await createUser({
-      email: `access-outsider-${suffix}@morsel.test`,
+      email: `access-outsider-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     const invitee = await createUser({
-      email: `access-invitee-${suffix}@morsel.test`,
+      email: `access-invitee-${suffix}@srotiva.test`,
       passwordHash: "test-password-hash",
     });
     userIds.push(owner.id, editor.id, viewer.id, outsider.id, invitee.id);

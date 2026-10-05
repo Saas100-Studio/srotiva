@@ -1,4 +1,4 @@
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 
 export type LogEvent = {
   event: string;
@@ -14,6 +14,6 @@ export function logError(error: unknown, event: Omit<LogEvent, "errorCode">, wri
     timestamp: new Date().toISOString(),
     level: "error",
     ...event,
-    errorCode: error instanceof MorselApiError ? error.code : "INTERNAL_ERROR",
+    errorCode: error instanceof SrotivaApiError ? error.code : "INTERNAL_ERROR",
   }));
 }

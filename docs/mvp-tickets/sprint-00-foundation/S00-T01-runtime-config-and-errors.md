@@ -50,7 +50,7 @@ None.
   - `FETCH_TIMEOUT_MS`
   - `FETCH_MAX_BYTES`
   - `MANUAL_REFRESH_COOLDOWN_SECONDS`
-- Implement `MorselApiError` with `status`, `code`, `message`, and `details`.
+- Implement `SrotivaApiError` with `status`, `code`, `message`, and `details`.
 - Implement `jsonOk(data, init)` and `jsonError(error, init)`.
 - Implement `createRequestId()` using Node crypto random UUID.
 - Document required env vars in `.env.example` and `README.md`.
@@ -62,7 +62,7 @@ None.
   - Throws for missing `DATABASE_URL`.
   - Throws for weak `SESSION_SECRET` shorter than 32 characters.
 - `src/test/api-errors.test.mjs`
-  - Serializes `MorselApiError` to the agreed error envelope.
+  - Serializes `SrotivaApiError` to the agreed error envelope.
   - Serializes unexpected errors as `INTERNAL_ERROR` without leaking stack traces.
 
 ## Acceptance criteria

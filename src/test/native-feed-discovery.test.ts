@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import type { FetchImplementation } from "../lib/crawler/http-fetcher.ts";
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { clearRobotsCache } from "../lib/crawler/robots-policy.ts";
 import type { DnsResolver } from "../lib/crawler/url-safety.ts";
 import { discoverNativeFeeds } from "../lib/feed/discover-native-feeds.ts";
@@ -19,7 +19,7 @@ function options(fetchImpl: FetchImplementation) {
     timeoutMs: 1_000,
     maxBytes: 10_000,
     maxRedirects: 2,
-    userAgent: "MorselBot/1.0",
+    userAgent: "SrotivaBot/1.0",
     fetchImpl,
   };
 }
@@ -137,7 +137,7 @@ test("checks robots before following a page redirect", async () => {
       sourceUrl: "https://example.com/start",
       fetchOptions: options(fetchImpl),
     }),
-    (error: unknown) => error instanceof MorselApiError && error.code === "ROBOTS_DISALLOWED",
+    (error: unknown) => error instanceof SrotivaApiError && error.code === "ROBOTS_DISALLOWED",
   );
   assert.ok(!requested.includes("https://other.example/private"));
 });

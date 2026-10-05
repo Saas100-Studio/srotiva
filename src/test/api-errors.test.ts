@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import {
   createRequestId,
   jsonError,
@@ -15,9 +15,9 @@ test("creates UUID request IDs", () => {
   );
 });
 
-test("serializes MorselApiError to the shared error envelope", async () => {
+test("serializes SrotivaApiError to the shared error envelope", async () => {
   const response = jsonError(
-    new MorselApiError(422, "INVALID_URL", "The URL is invalid.", {
+    new SrotivaApiError(422, "INVALID_URL", "The URL is invalid.", {
       field: "url",
     }),
     { requestId: "request-123" },
@@ -37,7 +37,7 @@ test("serializes MorselApiError to the shared error envelope", async () => {
 
 test("does not let response init override the API error status", () => {
   const response = jsonError(
-    new MorselApiError(422, "INVALID_URL", "The URL is invalid."),
+    new SrotivaApiError(422, "INVALID_URL", "The URL is invalid."),
     { status: 200, requestId: "request-override" },
   );
 

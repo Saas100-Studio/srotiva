@@ -2,7 +2,7 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
 import {
-  MorselApiError,
+  SrotivaApiError,
   URL_SAFETY_ERROR_CODE,
   type UrlSafetyErrorCode,
 } from "../api/errors.ts";
@@ -40,8 +40,8 @@ function urlError(
   code: UrlSafetyErrorCode,
   message: string,
   details: Record<string, unknown> = {},
-): MorselApiError {
-  return new MorselApiError(422, code, message, {
+): SrotivaApiError {
+  return new SrotivaApiError(422, code, message, {
     field: "url",
     ...details,
   });
@@ -177,8 +177,8 @@ export function assertSafeRedirectUrl(
   options: UrlSafetyOptions = {},
 ): Promise<SafeUrl> {
   return assertSafeUrlForFetch(value, options).catch((error: unknown) => {
-    if (error instanceof MorselApiError) {
-      throw new MorselApiError(error.status, error.code, error.message, {
+    if (error instanceof SrotivaApiError) {
+      throw new SrotivaApiError(error.status, error.code, error.message, {
         ...error.details,
         originalHostname,
       });

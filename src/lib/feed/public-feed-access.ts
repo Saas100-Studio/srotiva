@@ -14,6 +14,8 @@ import { renderRssFeed } from "./render-rss.ts";
 
 type OutputFormat = "rss" | "json" | "csv";
 
+const NO_INDEX = "noindex, nofollow, nosnippet";
+
 function postLimit(settings: Prisma.JsonValue): number {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return 50;
   const value = (settings as Record<string, unknown>).postLimit;
@@ -45,6 +47,7 @@ function notFound(requestId: string): Response {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": getRenderCacheControl("private"),
+      "x-robots-tag": NO_INDEX,
       "x-request-id": requestId,
     },
   });
@@ -75,11 +78,18 @@ export async function renderPublicFeed(request: Request, outputSlug: string, for
       headers: {
         "content-type": contentType,
         "cache-control": getRenderCacheControl(result.access),
+        "x-robots-tag": NO_INDEX,
         "x-request-id": requestId,
       },
     });
   } catch (error) {
     logError(error, { event: "request_failed", requestId, route: `/f/[slug]/${format}` });
-    return jsonError(error, { requestId, headers: { "cache-control": getRenderCacheControl("private") } });
+    return jsonError(error, {
+      requestId,
+      headers: {
+        "cache-control": getRenderCacheControl("private"),
+        "x-robots-tag": NO_INDEX,
+      },
+    });
   }
 }

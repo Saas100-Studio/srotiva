@@ -1,4 +1,4 @@
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { findUserWithActiveWorkspaceMembershipsById } from "../db/repositories/users.ts";
 import {
   sessionTokenFromCookieHeader,
@@ -71,7 +71,7 @@ export async function requireCurrentUser(
   const currentUser = await getOptionalCurrentUser(request);
 
   if (!currentUser) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       401,
       "UNAUTHENTICATED",
       "Authentication is required.",

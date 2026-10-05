@@ -1,6 +1,6 @@
-# Morsel
+# Srotiva
 
-Morsel turns public websites and native RSS/Atom sources into refreshed RSS,
+Srotiva turns public websites and native RSS/Atom sources into refreshed RSS,
 JSON, and CSV feeds. The current product is the single-workspace MVP described
 in `docs/mvp-tickets/`.
 
@@ -22,6 +22,11 @@ Replace every `.env.local` placeholder first. Never commit that file. Required
 settings are `APP_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 random
 characters), `CRAWLER_USER_AGENT`, `FETCH_TIMEOUT_MS`, `FETCH_MAX_BYTES`, and
 `MANUAL_REFRESH_COOLDOWN_SECONDS`.
+
+Optional production guardrails have safe beta defaults and can be tuned through
+`REQUEST_JSON_MAX_BYTES`, `WORKSPACE_FEED_LIMIT`, `WORKSPACE_ITEM_LIMIT`, and
+`WORKSPACE_MONTHLY_MANUAL_REFRESH_LIMIT`; see `.env.example`. Changing them
+should follow measured capacity and abuse data rather than marketing plan names.
 
 ## Runtime processes
 

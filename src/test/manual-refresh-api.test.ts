@@ -25,9 +25,9 @@ test("manual refresh API authorizes, throttles atomically, and rejects paused fe
   assert.ok(process.env.DATABASE_URL);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const owner = await createUser({ email: `manual-owner-${suffix}@morsel.test`, passwordHash: "hash" });
-  const editor = await createUser({ email: `manual-editor-${suffix}@morsel.test`, passwordHash: "hash" });
-  const viewer = await createUser({ email: `manual-viewer-${suffix}@morsel.test`, passwordHash: "hash" });
+  const owner = await createUser({ email: `manual-owner-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const editor = await createUser({ email: `manual-editor-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const viewer = await createUser({ email: `manual-viewer-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: owner.id, name: "Manual", slug: `manual-${suffix}` });
   await db.workspaceMember.createMany({ data: [
     { workspaceId: workspace.id, userId: editor.id, role: "EDITOR", joinedAt: new Date() },

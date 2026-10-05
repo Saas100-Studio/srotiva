@@ -20,11 +20,11 @@ export function getFeedHealth(feed: FeedHealthInput, now = new Date()): {
   if (feed.failureCount >= 3) {
     return {
       healthStatus: "failed",
-      healthMessage: `Refresh has failed ${feed.failureCount} times in a row. Morsel will retry automatically.`,
+      healthMessage: `Refresh has failed ${feed.failureCount} times in a row. Srotiva will retry automatically.`,
     };
   }
   if (feed.failureCount > 0 || feed.status === FeedStatus.DEGRADED || feed.status === FeedStatus.FAILED) {
-    return { healthStatus: "degraded", healthMessage: "The latest refresh had a problem. Morsel will retry automatically." };
+    return { healthStatus: "degraded", healthMessage: "The latest refresh had a problem. Srotiva will retry automatically." };
   }
   if (feed.nextRefreshAt && feed.nextRefreshAt < now) {
     return { healthStatus: "stale", healthMessage: "This feed is overdue for refresh." };

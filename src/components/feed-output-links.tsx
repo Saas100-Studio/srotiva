@@ -4,7 +4,13 @@ import { useState } from "react";
 
 type OutputUrls = { rss: string; json: string; csv: string };
 
-export function FeedOutputLinks({ outputUrls }: { outputUrls: OutputUrls }) {
+export function FeedOutputLinks({
+  outputUrls,
+  tokenAvailable = true,
+}: {
+  outputUrls: OutputUrls;
+  tokenAvailable?: boolean;
+}) {
   const [message, setMessage] = useState("");
 
   async function copy(label: string, url: string) {
@@ -20,7 +26,9 @@ export function FeedOutputLinks({ outputUrls }: { outputUrls: OutputUrls }) {
     <section className="feed-detail-card" aria-labelledby="output-links-heading">
       <h2 id="output-links-heading">Output links</h2>
       <p>Use these links in a feed reader or another tool.</p>
-      <div className="output-links">
+      {!tokenAvailable ? (
+        <p className="muted-copy">For security, this private feed&apos;s access token is hidden. Rotate it in Settings to get new ready-to-use links.</p>
+      ) : <div className="output-links">
         {Object.entries(outputUrls).map(([format, url]) => {
           const label = format.toUpperCase();
           return (
@@ -33,7 +41,7 @@ export function FeedOutputLinks({ outputUrls }: { outputUrls: OutputUrls }) {
             </div>
           );
         })}
-      </div>
+      </div>}
       <p className="copy-status" aria-live="polite">{message}</p>
     </section>
   );

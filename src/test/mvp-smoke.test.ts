@@ -36,7 +36,7 @@ test("MVP happy path reaches public output, refresh, and filters", async () => {
 
   try {
     const signupResponse = await signup(jsonRequest("/api/auth/signup", {
-      email: `smoke-${suffix}@morsel.test`,
+      email: `smoke-${suffix}@srotiva.test`,
       password: "correct-horse-battery-staple",
       name: "MVP Smoke",
     }));
@@ -61,7 +61,7 @@ test("MVP happy path reaches public output, refresh, and filters", async () => {
         title: "Security release",
         descriptionText: "A fixture item",
         descriptionHtml: null,
-        author: "Morsel",
+        author: "Srotiva",
         imageUrl: null,
         datePublished: new Date("2026-09-27T00:00:00.000Z"),
         dateModified: null,

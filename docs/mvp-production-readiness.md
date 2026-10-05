@@ -1,7 +1,11 @@
-# Morsel MVP Production Readiness
+# Srotiva MVP Production Readiness
 
 This document is the release gate for the current MVP, not a claim that an
 environment is production-ready by virtue of passing repository tests.
+
+The MVP implementation gate is now complete. Ongoing public-launch hardening,
+including security, operations, SEO, accounts, accessibility, and scale work,
+is tracked in `docs/post-mvp-production-readiness/`.
 
 ## Implemented and automated
 

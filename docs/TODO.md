@@ -1,6 +1,10 @@
-# Morsel TODO
+# Srotiva TODO
 
 Non-critical improvements found during ticket review. Keep MVP tickets authoritative for implementation order.
+
+Post-MVP launch gates and production-hardening work are tracked in
+`docs/post-mvp-production-readiness/`. This file retains lower-level engineering
+follow-ups and should not be used as the public-launch checklist.
 
 - Native feeds: accept only image media types for `imageUrl` instead of any Atom enclosure or Media RSS content.
 - Native feeds: use RSS GUIDs marked as permalinks when an item link is absent.

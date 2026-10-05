@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 import { FeedSourceType, FeedStatus, RefreshTrigger } from "@prisma/client";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { getDb } from "../lib/db/client.ts";
 import { createFeed } from "../lib/db/repositories/feeds.ts";
 import { createUser } from "../lib/db/repositories/users.ts";
@@ -27,7 +27,7 @@ const response = (bodyText: string, contentType: string) => async (url: string |
 test("refresh pipeline inserts, deduplicates, updates, and preserves items on failure", async (t) => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `refresh-${suffix}@morsel.test`, passwordHash: "test" });
+  const user = await createUser({ email: `refresh-${suffix}@srotiva.test`, passwordHash: "test" });
   const workspace = await createWorkspaceWithOwner({
     userId: user.id,
     name: "Refresh Test",
@@ -65,7 +65,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
   await t.test("native refresh is exactly deduplicated and updates changed content", async () => {
     const dependencies = {
       checkRobotsAllowed: allowed,
-      getCrawlerUserAgent: () => "MorselTest/1.0",
+      getCrawlerUserAgent: () => "SrotivaTest/1.0",
       fetchDocument: response(rss, "application/rss+xml"),
     };
     const first = await refreshFeed({ feedId: native.id, trigger: RefreshTrigger.MANUAL }, dependencies);
@@ -102,7 +102,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
       { feedId: webpage.id, trigger: RefreshTrigger.SCHEDULED },
       {
         checkRobotsAllowed: allowed,
-        getCrawlerUserAgent: () => "MorselTest/1.0",
+        getCrawlerUserAgent: () => "SrotivaTest/1.0",
         fetchDocument: response(html, "text/html"),
       },
     );
@@ -121,7 +121,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
           checked.push(targetUrl.toString());
           return true;
         },
-        getCrawlerUserAgent: () => "MorselTest/1.0",
+        getCrawlerUserAgent: () => "SrotivaTest/1.0",
         fetchDocument: async (url, options) => {
           await options?.beforeRedirect?.(new URL("https://example.com/redirected.xml"));
           return response(rss, "application/rss+xml")(url);
@@ -142,9 +142,9 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
         { feedId: native.id, trigger: RefreshTrigger.RETRY },
         {
           checkRobotsAllowed: allowed,
-          getCrawlerUserAgent: () => "MorselTest/1.0",
+          getCrawlerUserAgent: () => "SrotivaTest/1.0",
           fetchDocument: async () => {
-            throw new MorselApiError(502, "FETCH_HTTP_ERROR", "Upstream failed.", {
+            throw new SrotivaApiError(502, "FETCH_HTTP_ERROR", "Upstream failed.", {
               status: 503,
               url: `https://example.com/feed.xml?token=${secret}`,
             });
@@ -168,7 +168,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
       { feedId: native.id, trigger: RefreshTrigger.RETRY },
       {
         checkRobotsAllowed: allowed,
-        getCrawlerUserAgent: () => "MorselTest/1.0",
+        getCrawlerUserAgent: () => "SrotivaTest/1.0",
         fetchDocument: response(rss, "application/rss+xml"),
       },
     );
@@ -187,7 +187,7 @@ test("refresh pipeline inserts, deduplicates, updates, and preserves items on fa
       { feedId: native.id, trigger: RefreshTrigger.SCHEDULED },
       {
         checkRobotsAllowed: allowed,
-        getCrawlerUserAgent: () => "MorselTest/1.0",
+        getCrawlerUserAgent: () => "SrotivaTest/1.0",
         fetchDocument: async () => {
           fetched = true;
           return response(rss, "application/rss+xml")("https://example.com/feed.xml");

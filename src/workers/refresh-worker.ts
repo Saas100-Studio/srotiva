@@ -1,12 +1,13 @@
 import { hostname } from "node:os";
 import { pathToFileURL } from "node:url";
 
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { refreshFeed } from "../lib/feed/refresh-feed.ts";
 import {
   claimNextRefreshJob,
   completeRefreshJob,
   failRefreshJob,
+  reclaimStaleRefreshJobs,
 } from "../lib/jobs/refresh-queue.ts";
 
 type WorkerDependencies = {
@@ -14,10 +15,11 @@ type WorkerDependencies = {
   refreshFeed?: typeof refreshFeed;
   completeRefreshJob?: typeof completeRefreshJob;
   failRefreshJob?: typeof failRefreshJob;
+  reclaimStaleRefreshJobs?: typeof reclaimStaleRefreshJobs;
 };
 
 function jobError(error: unknown) {
-  return error instanceof MorselApiError
+  return error instanceof SrotivaApiError
     ? { code: error.code, message: error.message }
     : { code: "REFRESH_FAILED", message: "The feed refresh failed." };
 }
@@ -26,6 +28,7 @@ export async function processNextRefreshJob(
   workerId: string,
   dependencies: WorkerDependencies = {},
 ) {
+  await (dependencies.reclaimStaleRefreshJobs ?? reclaimStaleRefreshJobs)();
   const job = await (dependencies.claimNextRefreshJob ?? claimNextRefreshJob)({ workerId });
   if (!job) return null;
 

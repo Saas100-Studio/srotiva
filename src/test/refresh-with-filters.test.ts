@@ -21,7 +21,7 @@ import { refreshFeed } from "../lib/feed/refresh-feed.ts";
 const rss = readFileSync(new URL("./fixtures/rss-basic.xml", import.meta.url), "utf8");
 const dependencies = {
   checkRobotsAllowed: async () => true,
-  getCrawlerUserAgent: () => "MorselTest/1.0",
+  getCrawlerUserAgent: () => "SrotivaTest/1.0",
   fetchDocument: async (url: string | URL) => ({
     finalUrl: url.toString(),
     status: 200,
@@ -36,7 +36,7 @@ const dependencies = {
 test("refresh stores filter decisions, updates them when rules change, and excludes filtered output", async (t) => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `filters-${suffix}@morsel.test`, passwordHash: "test" });
+  const user = await createUser({ email: `filters-${suffix}@srotiva.test`, passwordHash: "test" });
   const workspace = await createWorkspaceWithOwner({ userId: user.id, name: "Filters", slug: `filters-${suffix}` });
   const feed = await createFeed({
     workspaceId: workspace.id,

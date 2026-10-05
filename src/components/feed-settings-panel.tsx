@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ClientApiError, deleteFeed, updateFeedStatus } from "../lib/client/api-client.ts";
+import { ClientApiError, deleteFeed, rotatePrivateFeedToken, updateFeedStatus } from "../lib/client/api-client.ts";
 import { ErrorState } from "./error-state.tsx";
 import { FeedStatusBadge } from "./feed-status-badge.tsx";
 
@@ -30,6 +30,7 @@ export function FeedSettingsPanel({
   const [status, setStatus] = useState(initialStatus);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<{ message: string; requestId?: string } | null>(null);
+  const [rotatedOutputUrls, setRotatedOutputUrls] = useState<{ rss: string; json: string; csv: string } | null>(null);
 
   async function toggleStatus() {
     const nextStatus = status === "PAUSED" ? "ACTIVE" : "PAUSED";
@@ -66,6 +67,25 @@ export function FeedSettingsPanel({
     }
   }
 
+  async function rotateToken() {
+    if (!window.confirm("Rotate this private feed’s access token? Every existing private output URL will stop working immediately.")) return;
+    setPending(true);
+    setError(null);
+    setRotatedOutputUrls(null);
+    try {
+      const result = await rotatePrivateFeedToken(workspaceId, feedId);
+      setRotatedOutputUrls(result.outputUrls);
+      router.refresh();
+    } catch (requestError) {
+      setError({
+        message: requestError instanceof Error ? requestError.message : "Unable to rotate the access token.",
+        requestId: requestError instanceof ClientApiError ? requestError.requestId : undefined,
+      });
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <section className="feed-detail-card" aria-labelledby="feed-settings-heading">
       <h2 id="feed-settings-heading">Settings</h2>
@@ -79,9 +99,23 @@ export function FeedSettingsPanel({
           <button className="button button--ghost" type="button" onClick={toggleStatus} disabled={pending}>
             {status === "PAUSED" ? "Resume feed" : "Pause feed"}
           </button>
+          {visibility === "PRIVATE" ? (
+            <button className="button button--ghost" type="button" onClick={rotateToken} disabled={pending}>Rotate access token</button>
+          ) : null}
           <button className="button button--danger" type="button" onClick={remove} disabled={pending}>Delete feed</button>
         </div>
       ) : <p className="muted-copy">You have view-only access to this feed.</p>}
+      {rotatedOutputUrls ? (
+        <div className="output-links" role="status" aria-live="polite">
+          <p><strong>Save these new links now.</strong> For security, they will not be shown again after you leave or refresh this page.</p>
+          {Object.entries(rotatedOutputUrls).map(([format, url]) => (
+            <div className="output-link" key={format}>
+              <label htmlFor={`rotated-output-${format}`}>{format.toUpperCase()}</label>
+              <input id={`rotated-output-${format}`} readOnly value={url} onFocus={(event) => event.currentTarget.select()} />
+            </div>
+          ))}
+        </div>
+      ) : null}
       {error ? <ErrorState message={error.message} requestId={error.requestId} /> : null}
     </section>
   );

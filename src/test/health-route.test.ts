@@ -69,9 +69,9 @@ test("environment validation rejects missing required values without printing va
   assert.throws(() => validateEnvironment({}), /SESSION_SECRET is required/);
   assert.doesNotThrow(() => validateEnvironment({
     APP_URL: "http://localhost:3000",
-    DATABASE_URL: "postgresql://user:password@localhost:5432/morsel",
+    DATABASE_URL: "postgresql://user:password@localhost:5432/srotiva",
     SESSION_SECRET: "x".repeat(32),
-    CRAWLER_USER_AGENT: "MorselBot/1.0 (+https://example.com/bot)",
+    CRAWLER_USER_AGENT: "SrotivaBot/1.0 (+https://example.com/bot)",
     FETCH_TIMEOUT_MS: "10000",
     FETCH_MAX_BYTES: "2000000",
     MANUAL_REFRESH_COOLDOWN_SECONDS: "300",

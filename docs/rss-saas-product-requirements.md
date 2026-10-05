@@ -1,4 +1,4 @@
-# Morsel Product Requirements: RSS.app-Like Feed Generation SaaS
+# Srotiva Product Requirements: RSS.app-Like Feed Generation SaaS
 
 Date: 2026-07-08
 
@@ -44,9 +44,9 @@ Security and legal reference sources:
 
 ## 1. Product Summary
 
-Morsel lets users create dependable machine-readable feeds from web pages, existing RSS/Atom feeds, newsletters, search/topic sources, and selected social/platform URLs, then reuse those feeds as RSS, JSON, CSV, widgets, webhooks, alerts, and API data.
+Srotiva lets users create dependable machine-readable feeds from web pages, existing RSS/Atom feeds, newsletters, search/topic sources, and selected social/platform URLs, then reuse those feeds as RSS, JSON, CSV, widgets, webhooks, alerts, and API data.
 
-In simple language: users paste a URL or choose a source, Morsel detects or builds a feed, keeps it refreshed, filters noise, removes duplicates, and sends updates where the user needs them.
+In simple language: users paste a URL or choose a source, Srotiva detects or builds a feed, keeps it refreshed, filters noise, removes duplicates, and sends updates where the user needs them.
 
 Target customers:
 
@@ -131,9 +131,9 @@ Success: Low support time, fast diagnosis, safe operational controls.
 
 ### Competitive Positioning
 
-Morsel should not begin as a broad personal RSS reader. The market evidence suggests three adjacent categories:
+Srotiva should not begin as a broad personal RSS reader. The market evidence suggests three adjacent categories:
 
-| Product | Observed strengths | Product lesson for Morsel |
+| Product | Observed strengths | Product lesson for Srotiva |
 | --- | --- | --- |
 | RSS.app | Feed generation, visual builder, widgets, bots, bundles, filters, exports, API/webhooks, pricing-gated limits | Primary parity target for a generator and delivery SaaS |
 | Feedly | Reader, newsletters, Google News, boards, search, teams, enterprise intelligence | Good inspiration for saved views and team organization, but not the v1 wedge |
@@ -141,8 +141,8 @@ Morsel should not begin as a broad personal RSS reader. The market evidence sugg
 | FetchRSS | Visual builder, auto-updated generated feeds, unique feed URLs, social URL feeds, RSS/Atom/JSON/CSV, filters | Direct generator competitor; proves point-and-click builder expectations |
 | RSSHub | Open-source route-based source adapters for many platforms | Useful architectural pattern for platform-specific sources and community routes |
 | FiveFilters | CSS-selector feed creation, RSS/JSON outputs, managed custom feeds | Useful for advanced selector mode and custom managed feed services |
-| Zapier RSS | RSS triggers and feed item creation inside workflow automation | Morsel should integrate with Zapier/Make rather than trying to replace them |
-| IFTTT RSS | Simple applet triggers for RSS/Atom to notifications/email | Morsel should provide clean feeds and webhooks that these tools can consume |
+| Zapier RSS | RSS triggers and feed item creation inside workflow automation | Srotiva should integrate with Zapier/Make rather than trying to replace them |
+| IFTTT RSS | Simple applet triggers for RSS/Atom to notifications/email | Srotiva should provide clean feeds and webhooks that these tools can consume |
 | RSS API | Feed parser/subscription API with webhooks, validation, detection, combine, pricing by subscriptions/parses | Reference for developer API packaging and usage-based limits |
 
 Recommended approach:
@@ -516,7 +516,7 @@ Acceptance criteria:
 
 Description: Convert email newsletters into feed items using private generated email addresses.
 
-User story: As a researcher, I subscribe to newsletters with a Morsel address and read/filter them as feed items.
+User story: As a researcher, I subscribe to newsletters with a Srotiva address and read/filter them as feed items.
 
 Functional requirements:
 
@@ -2250,7 +2250,7 @@ Implementation:
 
 Acceptance:
 
-- User can connect Morsel feed URL to RSS by Zapier or IFTTT.
+- User can connect Srotiva feed URL to RSS by Zapier or IFTTT.
 
 ### API Keys
 
@@ -2304,7 +2304,7 @@ This plan system is inspired by RSS.app limits but adapted for a new SaaS. Publi
 | Newsletter feeds | no | 2 | 20 | 100 | custom |
 | Visual builder | no | limited | yes | yes | custom |
 | Social adapters | no | selected | selected | more + priority | custom/legal review |
-| Branding | Morsel link | removable | removable | removable | custom |
+| Branding | Srotiva link | removable | removable | removable | custom |
 | Support | docs | email | priority email | priority + diagnostics | SLA |
 
 Trial logic:
@@ -2359,7 +2359,7 @@ Usage tracking:
 
 ### Webhook Signing
 
-- Header: `Morsel-Signature: t=<unix>,v1=<hmac>`.
+- Header: `Srotiva-Signature: t=<unix>,v1=<hmac>`.
 - HMAC SHA-256 over `${timestamp}.${raw_body}`.
 - Reject timestamps outside 300 seconds.
 - Use timing-safe comparison.
@@ -2911,7 +2911,7 @@ Test cases: duplicate feed slug blocked per workspace; duplicate item fingerprin
 
 Dependencies: Tech stack decision.
 
-Suggested prompt: "Implement the initial Postgres schema for Morsel using the product requirements. Include users, workspaces, workspace_members, feeds, feed_sources, feed_items, feed_refresh_jobs, feed_filters, plans, usage_limits, audit_logs, and error_logs. Add migrations and tests for key constraints."
+Suggested prompt: "Implement the initial Postgres schema for Srotiva using the product requirements. Include users, workspaces, workspace_members, feeds, feed_sources, feed_items, feed_refresh_jobs, feed_filters, plans, usage_limits, audit_logs, and error_logs. Add migrations and tests for key constraints."
 
 ### Task 2: Implement Auth and Workspace Shell
 
@@ -2927,7 +2927,7 @@ Test cases: invalid login, duplicate signup, member role checks, session expiry.
 
 Dependencies: Task 1.
 
-Suggested prompt: "Implement authentication and workspace tenancy for Morsel. Create signup/login/logout, default workspace creation, workspace-aware middleware, and role checks for owner/admin/editor/viewer."
+Suggested prompt: "Implement authentication and workspace tenancy for Srotiva. Create signup/login/logout, default workspace creation, workspace-aware middleware, and role checks for owner/admin/editor/viewer."
 
 ### Task 3: Build URL Safety and Fetcher Service
 
@@ -3087,7 +3087,7 @@ Test cases: checkout success, payment failure, trial expired, downgrade below us
 
 Dependencies: Tasks 1, 2, 7.
 
-Suggested prompt: "Implement Stripe billing and plan limits for Morsel. Add public plans, checkout, customer portal, Stripe webhook handling, usage rollups, entitlement checks, UI usage meters, and tests for upgrade/downgrade states."
+Suggested prompt: "Implement Stripe billing and plan limits for Srotiva. Add public plans, checkout, customer portal, Stripe webhook handling, usage rollups, entitlement checks, UI usage meters, and tests for upgrade/downgrade states."
 
 ### Task 13: Visual Builder
 
@@ -3119,7 +3119,7 @@ Test cases: admin RBAC, impersonation audit, job replay, error log grouping.
 
 Dependencies: Tasks 1, 7, 11.
 
-Suggested prompt: "Implement the admin diagnostics dashboard for Morsel. Include user/workspace lookup, feed diagnostics, job history, error logs, webhook deliveries, queue health summary, audited impersonation, and job replay."
+Suggested prompt: "Implement the admin diagnostics dashboard for Srotiva. Include user/workspace lookup, feed diagnostics, job history, error logs, webhook deliveries, queue health summary, audited impersonation, and job replay."
 
 ## 19. Final Deliverables
 
@@ -3185,11 +3185,11 @@ Production plan:
 Open questions before development:
 
 1. Which customer segment is first: marketers/agencies, developers, or researchers?
-2. Should Morsel use a managed auth provider or own Auth.js from the start?
+2. Should Srotiva use a managed auth provider or own Auth.js from the start?
 3. Which deployment target is preferred for browser workers: Fly.io, Render, ECS, or Kubernetes?
 4. Are social adapters required for launch, or can launch focus on native feeds, webpages, newsletters, and Google News?
 5. What legal stance should we take on robots.txt disallow: hard block, warning, or enterprise-configurable policy?
-6. Should public feed/widget URLs be branded with `morsel.app` or customer custom domains?
+6. Should public feed/widget URLs use the purchased Srotiva domain or customer custom domains?
 7. What content retention policy is acceptable for feed items, raw snapshots, screenshots, and newsletter email bodies?
 8. Do we need SOC 2 readiness in year one?
 9. What is the desired free-plan generosity given crawler and browser-rendering costs?

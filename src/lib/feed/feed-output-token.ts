@@ -1,9 +1,13 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 
 import { loadEnv } from "../config/env.ts";
 
 export function createPrivateFeedToken(feedId: string): string {
   return createHmac("sha256", loadEnv().SESSION_SECRET).update(feedId).digest("base64url");
+}
+
+export function createRandomPrivateFeedToken(): string {
+  return randomBytes(32).toString("base64url");
 }
 
 export function hashPrivateFeedToken(token: string): string {

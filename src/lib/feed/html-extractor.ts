@@ -1,7 +1,7 @@
 import * as cheerio from "cheerio";
 import type { Cheerio, CheerioAPI } from "cheerio";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
 import { createItemFingerprint } from "./fingerprint.ts";
 import { cleanHtmlText } from "./html-cleanup.ts";
 import type { NativeFeedItem } from "./native-parser.ts";
@@ -96,7 +96,7 @@ function extractCard(
 export function extractItemsFromHtml(input: ExtractItemsFromHtmlInput): HtmlExtractionResult {
   const pageUrl = httpUrl(input.pageUrl, input.pageUrl);
   if (!pageUrl) {
-    throw new MorselApiError(422, "INVALID_URL", "The page URL must be a safe HTTP or HTTPS URL.");
+    throw new SrotivaApiError(422, "INVALID_URL", "The page URL must be a safe HTTP or HTTPS URL.");
   }
 
   const $ = cheerio.load(input.bodyText);
@@ -114,7 +114,7 @@ export function extractItemsFromHtml(input: ExtractItemsFromHtmlInput): HtmlExtr
 
   const items = [...unique.values()];
   if (items.length < 2) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       422,
       "NO_ITEMS_EXTRACTED",
       "No repeated article or card pattern could be extracted.",
@@ -139,7 +139,7 @@ export function extractItemsFromHtml(input: ExtractItemsFromHtmlInput): HtmlExtr
   ];
 
   if (confidence < MIN_CONFIDENCE) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       422,
       "NO_ITEMS_EXTRACTED",
       "The repeated links did not form a confident article or card pattern.",

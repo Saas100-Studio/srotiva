@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { Prisma, WorkspaceRole } from "@prisma/client";
 
-import { MorselApiError } from "../api/errors.ts";
+import { SrotivaApiError } from "../api/errors.ts";
+import { readBoundedJsonBody } from "../api/json-body.ts";
 import {
   writeAuditLog,
   type AuditLogClient,
@@ -32,8 +33,8 @@ export type AuthInput = {
   name?: string;
 };
 
-function validationError(details: Record<string, string>): MorselApiError {
-  return new MorselApiError(
+function validationError(details: Record<string, string>): SrotivaApiError {
+  return new SrotivaApiError(
     400,
     "VALIDATION_ERROR",
     "Check the submitted fields and try again.",
@@ -79,11 +80,9 @@ export function parseAuthInput(
 }
 
 export async function readJsonBody(request: Request): Promise<unknown> {
-  try {
-    return await request.json();
-  } catch {
-    throw validationError({ body: "A valid JSON body is required." });
-  }
+  return readBoundedJsonBody(request, {
+    invalidJsonError: () => validationError({ body: "A valid JSON body is required." }),
+  });
 }
 
 function workspaceSlugBase(email: string): string {
@@ -117,8 +116,8 @@ function uniqueField(error: unknown, field: string): boolean {
     : String(target ?? "").includes(field);
 }
 
-function emailTaken(): MorselApiError {
-  return new MorselApiError(
+function emailTaken(): SrotivaApiError {
+  return new SrotivaApiError(
     409,
     "EMAIL_TAKEN",
     "An account with this email already exists.",
@@ -199,7 +198,7 @@ export async function signup(
     }
   }
 
-  throw new MorselApiError(
+  throw new SrotivaApiError(
     409,
     "WORKSPACE_SLUG_UNAVAILABLE",
     "A default workspace could not be created. Please try again.",
@@ -217,7 +216,7 @@ export async function login(input: AuthInput): Promise<CurrentUser> {
     (await verifyPassword(user.passwordHash, input.password));
 
   if (!user || !validPassword) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       401,
       "INVALID_CREDENTIALS",
       "Email or password is incorrect.",
@@ -231,7 +230,7 @@ export async function login(input: AuthInput): Promise<CurrentUser> {
   const currentUser = await findCurrentUserById(user.id);
 
   if (!currentUser) {
-    throw new MorselApiError(
+    throw new SrotivaApiError(
       403,
       "NO_ACTIVE_WORKSPACE",
       "This account does not have an active workspace.",

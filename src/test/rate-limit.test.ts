@@ -4,7 +4,7 @@ import test from "node:test";
 import { handleLoginPost } from "../app/api/auth/login/route.ts";
 import { handleDiscoverPost } from "../app/api/feeds/discover/route.ts";
 import { GET as getRss } from "../app/f/[slug]/rss/route.ts";
-import { MorselApiError } from "../lib/api/errors.ts";
+import { SrotivaApiError } from "../lib/api/errors.ts";
 import { createSessionCookie } from "../lib/auth/session.ts";
 import { getDb } from "../lib/db/client.ts";
 import { createUser } from "../lib/db/repositories/users.ts";
@@ -66,7 +66,7 @@ test("limiter purges expired buckets and never evicts live limits at capacity", 
 test("login, discovery, and public output routes return RATE_LIMITED", async (t) => {
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const user = await createUser({ email: `limits-${suffix}@morsel.test`, passwordHash: "hash" });
+  const user = await createUser({ email: `limits-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: user.id, name: "Limits", slug: `limits-${suffix}` });
   const cookie = createSessionCookie(user.id, { secure: false });
 
@@ -80,7 +80,7 @@ test("login, discovery, and public output routes return RATE_LIMITED", async (t)
   await t.test("login limits an IP and normalized email pair", async () => {
     resetRateLimits();
     const make = () => handleLoginPost(request("/api/auth/login", {
-      email: "missing@morsel.test",
+      email: "missing@srotiva.test",
       password: "not-the-password",
     }, "203.0.113.10"));
     for (let index = 0; index < 5; index += 1) assert.equal((await make()).status, 401);
@@ -110,7 +110,7 @@ test("login, discovery, and public output routes return RATE_LIMITED", async (t)
       url: "https://example.com/private-query?token=secret",
     }, "203.0.113.12", cookie), {
       discoverFeedPreview: async () => {
-        throw new MorselApiError(502, "FETCH_FAILED", "The source could not be fetched.");
+        throw new SrotivaApiError(502, "FETCH_FAILED", "The source could not be fetched.");
       },
     });
     assert.equal(response.status, 502);
@@ -137,7 +137,7 @@ test("login, discovery, and public output routes return RATE_LIMITED", async (t)
 
 test("structured error logs contain request IDs and error codes without secrets", () => {
   const lines: string[] = [];
-  logError(new MorselApiError(500, "FETCH_FAILED", "token=secret password=secret"), {
+  logError(new SrotivaApiError(500, "FETCH_FAILED", "token=secret password=secret"), {
     event: "request_failed",
     requestId: "request-123",
     route: "/safe-route",

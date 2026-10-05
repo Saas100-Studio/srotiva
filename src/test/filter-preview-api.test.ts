@@ -22,8 +22,8 @@ test("filter preview combines saved rules with a candidate and does not persist 
   assert.ok(process.env.DATABASE_URL);
   const db = getDb();
   const suffix = `${Date.now()}-${crypto.randomUUID()}`;
-  const owner = await createUser({ email: `preview-owner-${suffix}@morsel.test`, passwordHash: "hash" });
-  const viewer = await createUser({ email: `preview-viewer-${suffix}@morsel.test`, passwordHash: "hash" });
+  const owner = await createUser({ email: `preview-owner-${suffix}@srotiva.test`, passwordHash: "hash" });
+  const viewer = await createUser({ email: `preview-viewer-${suffix}@srotiva.test`, passwordHash: "hash" });
   const workspace = await createWorkspaceWithOwner({ userId: owner.id, name: "Preview", slug: `preview-${suffix}` });
   await db.workspaceMember.create({ data: {
     workspaceId: workspace.id,

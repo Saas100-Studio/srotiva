@@ -1,6 +1,7 @@
 import { WorkspaceRole } from "@prisma/client";
 
-import { MorselApiError } from "../../../../../lib/api/errors.ts";
+import { SrotivaApiError } from "../../../../../lib/api/errors.ts";
+import { readBoundedJsonBody } from "../../../../../lib/api/json-body.ts";
 import { createRequestContext } from "../../../../../lib/api/request-context.ts";
 import { createRequestId, jsonError, jsonOk } from "../../../../../lib/api/responses.ts";
 import { requireWorkspaceRole } from "../../../../../lib/auth/workspace-access.ts";
@@ -9,9 +10,9 @@ import { logError } from "../../../../../lib/logging/logger.ts";
 import { enforceRateLimit } from "../../../../../lib/security/rate-limit.ts";
 
 function routeError(error: unknown): unknown {
-  if (!(error instanceof MorselApiError)) return error;
-  if (error.code === "UNAUTHENTICATED") return new MorselApiError(401, "UNAUTHORIZED", "Authentication is required.");
-  if (error.code === "WORKSPACE_ACCESS_DENIED") return new MorselApiError(403, "FORBIDDEN", "Workspace editor access is required.");
+  if (!(error instanceof SrotivaApiError)) return error;
+  if (error.code === "UNAUTHENTICATED") return new SrotivaApiError(401, "UNAUTHORIZED", "Authentication is required.");
+  if (error.code === "WORKSPACE_ACCESS_DENIED") return new SrotivaApiError(403, "FORBIDDEN", "Workspace editor access is required.");
   return error;
 }
 
@@ -20,22 +21,20 @@ export async function handleManualRefresh(request: Request, feedId: string): Pro
   let workspaceId: string | undefined;
   try {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(feedId)) {
-      throw new MorselApiError(422, "VALIDATION_ERROR", "feedId must be a UUID.");
+      throw new SrotivaApiError(422, "VALIDATION_ERROR", "feedId must be a UUID.");
     }
-    const value: unknown = await request.json().catch(() => {
-      throw new MorselApiError(422, "VALIDATION_ERROR", "The request body must be valid JSON.");
-    });
+    const value = await readBoundedJsonBody(request);
     const requestedWorkspaceId = value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>).workspaceId
       : undefined;
     if (typeof requestedWorkspaceId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedWorkspaceId)) {
-      throw new MorselApiError(422, "VALIDATION_ERROR", "workspaceId must be a UUID.");
+      throw new SrotivaApiError(422, "VALIDATION_ERROR", "workspaceId must be a UUID.");
     }
     workspaceId = requestedWorkspaceId;
 
     const context = await createRequestContext(request);
     if (workspaceId !== context.workspace.id) {
-      throw new MorselApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
+      throw new SrotivaApiError(403, "FORBIDDEN", "The active workspace does not match the request.");
     }
     await requireWorkspaceRole({
       userId: context.user.id,
