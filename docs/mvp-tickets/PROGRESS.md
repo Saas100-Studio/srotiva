@@ -1,6 +1,6 @@
 # Srotiva MVP Progress
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 Use this file to help Codex agents understand the current implementation state without rereading the full PRD. Update it after every ticket.
 
@@ -78,6 +78,7 @@ Do not write real secrets in this file.
 
 ## Maintenance Fixes
 
+- 2026-10-05: Restored the original landing-page design from `b21af4d`, which was replaced by the minimal homepage in `aedd453` during the dashboard-shell ticket. The grid background, bold hero, sample feed console, feature cards, output section, solutions, and footer now use the current Srotiva branding and implemented MVP copy. Account and feed-creation links open real routes; sample articles are explicitly labeled. Homepage metadata and structured data are preserved, and a CSS module isolates the design from the dashboard. Updated homepage regression coverage and Playwright navigation/accessibility/mobile checks. Focused Node tests pass (9/9); both targeted Playwright tests passed, including WCAG checks and no horizontal overflow at 320/390/720/1280px (the dev-server cleanup hung on Windows and was interrupted after both results). `bun run check` passes lint and strict typecheck, then stops at the test stage: 141/175 tests pass and 34 database-dependent tests fail because Prisma cannot reach the configured Neon PostgreSQL server on port 5432. `bun run build` was run separately and passed. No dependency or database changes. Full verification requires restored database connectivity; existing production-release blockers remain unchanged.
 - 2026-10-04: Constrained the feed-creation preview to its dashboard column and made oversized feed titles, descriptions, and warnings wrap without introducing page-level horizontal scrolling. Added a feed creation UI regression assertion. `bun run check` passes with all 173 tests and the production build. Restarted the local `next start` process and verified the large Lapaas Voice preview in-browser: document scroll width equals client width at the reported desktop viewport.
 
 ## Sprint Release Notes Draft

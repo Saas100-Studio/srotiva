@@ -65,7 +65,7 @@ test("dashboard uses bounded server-side search and pagination", async () => {
 });
 
 test("homepage includes signup and login links without unsupported claims", async () => {
-  const home = await source("../app/page.tsx");
+  const home = await source("../components/landing-page.tsx");
 
   assert.match(home, /href="\/signup"/);
   assert.match(home, /href="\/login"/);

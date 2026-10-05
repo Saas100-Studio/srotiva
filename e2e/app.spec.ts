@@ -16,11 +16,31 @@ test.describe("public and authentication pages", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Turn a website into a feed you can use anywhere.",
+        name: "Small bites from the live web.",
       }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Create an account" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Create a feed", exact: true })).toHaveAttribute("href", "/dashboard/feeds/new");
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/login");
+    await expect(page.getByRole("link", { name: "Sign up", exact: true })).toHaveAttribute("href", "/signup");
+    await expect(page.getByRole("heading", { name: "Export feeds to your stack" })).toBeVisible();
+    await page.getByRole("link", { name: "Explore feeds" }).click();
+    await expect(page).toHaveURL(/#feeds$/u);
+    await expect(page.getByRole("heading", { name: "Turn any useful source into a feed" })).toBeInViewport();
     await expectNoAccessibilityViolations(page);
+  });
+
+  test("restored landing stays within narrow mobile viewports", async ({ page }) => {
+    for (const width of [320, 390, 720, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Create a feed", exact: true })).toBeVisible();
+      const dimensions = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      }));
+      expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
+    }
   });
 
   for (const route of ["/login", "/signup"] as const) {
